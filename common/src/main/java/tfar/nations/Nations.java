@@ -15,6 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tfar.nations.nation.Nation;
+import tfar.nations.platform.Services;
 
 // This class is part of the common project meaning it is shared between all supported loaders. Code written here can only
 // import and access the vanilla codebase, libraries used by vanilla, and optionally third party libraries that provide
@@ -52,18 +54,23 @@ public class Nations {
 
     private static int openGui(CommandContext<CommandSourceStack> commandContext) throws CommandSyntaxException {
         ServerPlayer player = commandContext.getSource().getPlayerOrException();
-        player.openMenu(new SimpleMenuProvider((i, inventory, player1) -> new CreateNationsMenu(i,inventory, createNationContainer(player1)),
-                Component.literal("Create Nation")));
+
+        Nation nation = Services.PLATFORM.getNation(player);
+
+        if (nation == null) {
+
+            player.openMenu(new SimpleMenuProvider((i, inventory, player1) -> new YesNoMenu(i, inventory, createNationContainer(player1)),
+                    Component.literal("Create Nation?")));
+        } else {
+
+        }
+
+
         return 1;
     }
 
     private static Container createNationContainer(Player player1) {
-        SimpleContainer simpleContainer = new SimpleContainer(9) {
-            @Override
-            public ItemStack removeItem(int slot, int amount) {
-                return super.removeItem(slot, amount);
-            }
-        };
+        SimpleContainer simpleContainer = new SimpleContainer(9);
         ItemStack yes = new ItemStack(Items.GREEN_WOOL);
         yes.setHoverName(Component.literal("Yes"));
         simpleContainer.setItem(0,yes);
