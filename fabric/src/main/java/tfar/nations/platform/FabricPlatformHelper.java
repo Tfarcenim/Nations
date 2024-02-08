@@ -1,6 +1,6 @@
-package com.example.examplemod.platform;
+package tfar.nations.platform;
 
-import com.example.examplemod.platform.services.IPlatformHelper;
+import tfar.nations.platform.services.IPlatformHelper;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class FabricPlatformHelper implements IPlatformHelper {

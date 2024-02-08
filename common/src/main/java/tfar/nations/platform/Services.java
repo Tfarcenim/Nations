@@ -1,7 +1,7 @@
-package com.example.examplemod.platform;
+package tfar.nations.platform;
 
-import com.example.examplemod.CommonClass;
-import com.example.examplemod.platform.services.IPlatformHelper;
+import tfar.nations.Nations;
+import tfar.nations.platform.services.IPlatformHelper;
 
 import java.util.ServiceLoader;
 
@@ -24,7 +24,7 @@ public class Services {
         final T loadedService = ServiceLoader.load(clazz)
                 .findFirst()
                 .orElseThrow(() -> new NullPointerException("Failed to load service for " + clazz.getName()));
-        CommonClass.LOG.debug("Loaded {} for service {}", loadedService, clazz);
+        Nations.LOG.debug("Loaded {} for service {}", loadedService, clazz);
         return loadedService;
     }
 }
