@@ -1,5 +1,8 @@
 package tfar.nations.platform.services;
 
+import net.minecraft.server.level.ServerPlayer;
+import tfar.nations.nation.Nation;
+
 public interface IPlatformHelper {
 
     /**
@@ -33,4 +36,8 @@ public interface IPlatformHelper {
 
         return isDevelopmentEnvironment() ? "development" : "production";
     }
+
+    void setNation(ServerPlayer player, Nation nation);
+    Nation getNation(ServerPlayer player);
+
 }

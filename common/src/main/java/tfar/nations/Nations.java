@@ -51,15 +51,15 @@ public class Nations {
 
     private static int openGui(CommandContext<CommandSourceStack> commandContext) throws CommandSyntaxException {
         ServerPlayer player = commandContext.getSource().getPlayerOrException();
-        player.openMenu(new SimpleMenuProvider((i, inventory, player1) -> new NationsMenu(i,inventory,populateMain()),
-                Component.literal("Nations Menu")));
+        player.openMenu(new SimpleMenuProvider((i, inventory, player1) -> new CreateNationsMenu(i,inventory,populateMain()),
+                Component.literal("Create Nations Menu")));
         return 1;
     }
 
     private static Container populateMain() {
         SimpleContainer simpleContainer = new SimpleContainer(9);
         ItemStack first = new ItemStack(Items.BLACK_STAINED_GLASS);
-        first.setHoverName(Component.literal("Create Team / Disband Team / Leave Team"));
+        first.setHoverName(Component.literal("Create Nation"));
         simpleContainer.setItem(0,first);
         return simpleContainer;
     }
