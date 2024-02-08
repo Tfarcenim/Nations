@@ -1,5 +1,17 @@
 package tfar.nations;
 
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,4 +43,25 @@ public class Nations {
     //        LOG.info("Hello to examplemod");
     //    }
     }
+
+    public static void onCommandRegister(CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(Commands.literal(MOD_ID)
+                .executes(Nations::openGui));
+    }
+
+    private static int openGui(CommandContext<CommandSourceStack> commandContext) throws CommandSyntaxException {
+        ServerPlayer player = commandContext.getSource().getPlayerOrException();
+        player.openMenu(new SimpleMenuProvider((i, inventory, player1) -> new NationsMenu(i,inventory,populateMain()),
+                Component.literal("Nations Menu")));
+        return 1;
+    }
+
+    private static Container populateMain() {
+        SimpleContainer simpleContainer = new SimpleContainer(9);
+        ItemStack first = new ItemStack(Items.BLACK_STAINED_GLASS);
+        first.setHoverName(Component.literal("Create Team / Disband Team / Leave Team"));
+        simpleContainer.setItem(0,first);
+        return simpleContainer;
+    }
+
 }
