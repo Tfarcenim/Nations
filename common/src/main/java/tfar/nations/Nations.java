@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.slf4j.Logger;
@@ -51,16 +52,26 @@ public class Nations {
 
     private static int openGui(CommandContext<CommandSourceStack> commandContext) throws CommandSyntaxException {
         ServerPlayer player = commandContext.getSource().getPlayerOrException();
-        player.openMenu(new SimpleMenuProvider((i, inventory, player1) -> new CreateNationsMenu(i,inventory,populateMain()),
-                Component.literal("Create Nations Menu")));
+        player.openMenu(new SimpleMenuProvider((i, inventory, player1) -> new CreateNationsMenu(i,inventory, createNationContainer(player1)),
+                Component.literal("Create Nation")));
         return 1;
     }
 
-    private static Container populateMain() {
-        SimpleContainer simpleContainer = new SimpleContainer(9);
-        ItemStack first = new ItemStack(Items.BLACK_STAINED_GLASS);
-        first.setHoverName(Component.literal("Create Nation"));
-        simpleContainer.setItem(0,first);
+    private static Container createNationContainer(Player player1) {
+        SimpleContainer simpleContainer = new SimpleContainer(9) {
+            @Override
+            public ItemStack removeItem(int slot, int amount) {
+                return super.removeItem(slot, amount);
+            }
+        };
+        ItemStack yes = new ItemStack(Items.GREEN_WOOL);
+        yes.setHoverName(Component.literal("Yes"));
+        simpleContainer.setItem(0,yes);
+
+        ItemStack no = new ItemStack(Items.RED_WOOL);
+        no.setHoverName(Component.literal("No"));
+        simpleContainer.setItem(8,no);
+
         return simpleContainer;
     }
 
