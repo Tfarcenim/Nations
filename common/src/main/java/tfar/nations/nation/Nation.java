@@ -7,16 +7,14 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerPlayer;
 import tfar.nations.platform.Services;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public class Nation {
 
     private String name;
     private final Set<UUID> members = new HashSet<>();
     private int color =0xffffff;
+    private UUID owner;
 
     public String getName() {
         return name;
@@ -36,6 +34,19 @@ public class Nation {
             members.add(uuid);
             Services.PLATFORM.setNation(player,this);
         }
+    }
+
+    public void setOwner(ServerPlayer newOwner) {
+        this.owner = newOwner.getUUID();
+        addPlayers(List.of(newOwner));
+    }
+
+    public UUID getOwner() {
+        return owner;
+    }
+
+    public boolean isOwner(ServerPlayer player) {
+        return player.getUUID().equals(owner);
     }
 
     public void removePlayers(Collection<ServerPlayer> players) {

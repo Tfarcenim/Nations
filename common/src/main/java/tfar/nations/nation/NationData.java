@@ -33,21 +33,21 @@ public class NationData extends SavedData {
         return id;
     }
 
-    public boolean createNation(String name) {
-        if (nationsLookup.get(name) != null) return false;
+    public Nation createNation(String name) {
+        if (nationsLookup.get(name) != null) return null;
         Nation nation = new Nation();
         nation.setName(name);
         nations.add(nation);
         nationsLookup.put(name,nation);
         setDirty();
-        return true;
+        return nation;
     }
 
     public boolean removeNation(String name) {
         Nation toRemove = nationsLookup.get(name);
-        nations.remove(toRemove);
+        boolean b = nations.remove(toRemove);
         nationsLookup.remove(name);
-        return true;
+        return b;
     }
 
     public List<Nation> getNations() {
@@ -81,12 +81,21 @@ public class NationData extends SavedData {
     }
 
 
-    public boolean joinNation(String string, Collection<ServerPlayer> serverPlayers) {
-        Nation nation = getNationByName(string);
+    public boolean joinNation(String name, Collection<ServerPlayer> serverPlayers) {
+        Nation nation = getNationByName(name);
         if (nation != null) {
             nation.addPlayers(serverPlayers);
             setDirty();
             return true;
+        }
+        return false;
+    }
+
+    public boolean setOwner(String name,ServerPlayer player) {
+        Nation nation = getNationByName(name);
+        if (nation != null) {
+            nation.setOwner(player);
+            setDirty();
         }
         return false;
     }

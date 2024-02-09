@@ -26,6 +26,7 @@ import tfar.nations.platform.Services;
 import tfar.nations.sgui.api.ClickType;
 import tfar.nations.sgui.api.elements.*;
 import tfar.nations.sgui.api.gui.SimpleGui;
+import tfar.nations.sgui.api.gui.layered.LayeredGui;
 
 import java.util.List;
 import java.util.UUID;
@@ -78,7 +79,7 @@ public class Nations {
     private static int createNation(CommandContext<CommandSourceStack> commandContext) {
         NationData nationData = getInstance(commandContext);
         String string = StringArgumentType.getString(commandContext, "name");
-        if (nationData.createNation(string)) {
+        if (nationData.createNation(string) != null) {
             return 1;
         }
         commandContext.getSource().sendFailure(Component.literal("Nation " + string + " already exists!"));
@@ -89,7 +90,7 @@ public class Nations {
         NationData nationData = getInstance(commandContext);
         String string = StringArgumentType.getString(commandContext, "name");
         if (nationData.removeNation(string)) {
-            commandContext.getSource().sendSuccess(Component.literal("Removed "+string+" Nation"),true);
+            commandContext.getSource().sendSuccess(Component.literal("Removed " + string + " Nation"), true);
             return 1;
         }
         commandContext.getSource().sendFailure(Component.literal("Nation " + string + " doesn't exist!"));
@@ -108,9 +109,9 @@ public class Nations {
 
     private static int openGui(CommandContext<CommandSourceStack> objectCommandContext) {
         try {
-            ServerPlayer player = objectCommandContext.getSource().getPlayer();
-            Nation nation = Services.PLATFORM.getNation(player);
-            if (nation == null) {
+            ServerPlayer player = objectCommandContext.getSource().getPlayerOrException();
+            Nation existingNation = Services.PLATFORM.getNation(player);
+            if (existingNation == null) {
                 SimpleGui gui = new SimpleGui(MenuType.HOPPER, player, false);
                 gui.setTitle(Component.literal("Create Nation?"));
                 gui.setSlot(0, new GuiElementBuilder()
@@ -121,8 +122,8 @@ public class Nations {
                             NationData nationData = NationData.getDefaultNationsInstance(serverPlayer.server);
                             String name = serverPlayer.getGameProfile().getName();
                             nationData.createNation(name);
-                            nationData.joinNation(name,List.of(serverPlayer));
-                            serverPlayer.sendSystemMessage(Component.literal("Created Nation"));
+                            nationData.setOwner(name, serverPlayer);
+                            serverPlayer.sendSystemMessage(Component.literal("Created Nation " + name));
                             gui.close();
                         })
                 );
@@ -133,9 +134,46 @@ public class Nations {
                 );
                 gui.open();
             } else {
+                if (existingNation.isOwner(player)) {
 
+                    SimpleGui teamLeaderMenu = new SimpleGui(MenuType.HOPPER, player, false);
+
+
+                    teamLeaderMenu.setTitle(Component.literal("Team Leader Menu"));
+                    teamLeaderMenu.setSlot(0, new GuiElementBuilder()
+                            .setItem(Items.BARRIER)
+                            .setName(Component.literal("Disband Nation?"))
+                            .setCallback((index, clickType, actionType) -> {
+                                SimpleGui confirmGui = new SimpleGui(MenuType.HOPPER, player, false);
+                                confirmGui.setTitle(Component.literal("Disband Nation?"));
+                                confirmGui.setSlot(0, new GuiElementBuilder()
+                                        .setItem(Items.GREEN_WOOL)
+                                        .setName(Component.literal("Yes"))
+                                        .setCallback((index1, clickType1, actionType1) -> {
+                                            ServerPlayer serverPlayer = confirmGui.getPlayer();
+                                            NationData nationData = NationData.getDefaultNationsInstance(serverPlayer.server);
+                                            nationData.removeNation(existingNation.getName());
+                                            serverPlayer.sendSystemMessage(Component.literal("Disbanded Nation " + existingNation.getName()));
+                                            confirmGui.close();
+                                        })
+                                );
+                                confirmGui.setSlot(4, new GuiElementBuilder()
+                                        .setItem(Items.RED_WOOL)
+                                        .setName(Component.literal("No"))
+                                        .setCallback((index1, clickType1, actionType1) -> confirmGui.close())
+                                );
+                                confirmGui.open();
+                            })
+
+                    );
+
+                    teamLeaderMenu.open();
+
+
+                } else {
+
+                }
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }

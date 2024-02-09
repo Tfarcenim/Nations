@@ -35,6 +35,7 @@ public class ForgePlatformHelper implements IPlatformHelper {
         CompoundTag tag = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
         if (nation != null) {
             tag.putString("nation", nation.getName());
+            player.getPersistentData().put(Player.PERSISTED_NBT_TAG,tag);
         } else {
             tag.remove("nation");
         }
