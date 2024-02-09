@@ -126,4 +126,12 @@ public class NationData extends SavedData {
         setDirty();
         return true;
     }
+
+    public boolean leaveNationUUIDs(Collection<UUID> serverPlayers) {
+        for (Nation nation : nations) {
+            nation.removeUUIDs(serverPlayers);
+        }
+        setDirty();
+        return true;
+    }
 }

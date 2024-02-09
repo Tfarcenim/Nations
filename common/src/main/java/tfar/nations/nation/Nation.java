@@ -57,6 +57,13 @@ public class Nation {
         }
     }
 
+    public void removeUUIDs(Collection<UUID> uuids) {
+        for (UUID player : uuids) {
+            members.remove(player);//todo
+           // Services.PLATFORM.setNation(player,null);
+        }
+    }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -70,6 +77,7 @@ public class Nation {
         }
         compoundTag.put("members",listTag);
         compoundTag.putInt("color",color);
+        compoundTag.putUUID("owner",owner);
         return compoundTag;
     }
 
@@ -86,6 +94,7 @@ public class Nation {
             nation.members.add(UUID.fromString(stringTag.getAsString()));
         }
         nation.color = tag.getInt("color");
+        nation.owner = tag.getUUID("owner");
         return nation;
     }
 }
