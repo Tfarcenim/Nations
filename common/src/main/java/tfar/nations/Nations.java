@@ -126,6 +126,7 @@ public class Nations {
                         .setCallback((index, clickType, actionType) -> {
                             nationData.joinNation(invitedTo.getName(),List.of(player));
                             nationData.removeInvite(player);
+                            player.sendSystemMessage(Component.literal("You are now part of "+invitedTo.getName()+" nation"),false);
                             inviteGui.close();
                         })
                 );
@@ -226,13 +227,12 @@ public class Nations {
                                             .setName(invitePlayer.getName())
                                             .setCallback(
                                                     (index2, type1, action1, gui) -> {
-                                                        if (!elementBuilder.asStack().hasFoil()) {
-                                                            elementBuilder.glow();
-                                                        }
+                                                        nationData.sendInvites(List.of(invitePlayer.getGameProfile()),existingNation);
+                                                        gui.close();
                                                     }));
                                 }
 
-                                inviteGui.setSlot(26, new GuiElementBuilder()
+                           /*     inviteGui.setSlot(26, new GuiElementBuilder()
                                         .setItem(Items.FEATHER)
                                         .setName(Component.literal("Send Invites"))
                                         .setCallback((index2, type1, action1, gui) -> {
@@ -249,7 +249,7 @@ public class Nations {
                                             }
                                             nationData.sendInvites(actuallyInvite,existingNation);
                                         })
-                                );
+                                );*/
 
                                 inviteGui.open();
                             }));
