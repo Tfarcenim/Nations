@@ -1,5 +1,7 @@
 package tfar.nations.nation;
 
+import com.google.common.collect.Multimap;
+import com.mojang.authlib.GameProfile;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -16,7 +18,7 @@ public class NationData extends SavedData {
 
     private final List<Nation> nations = new ArrayList<>();
     private final Map<String,Nation> nationsLookup = new HashMap<>();
-
+    private final Map<UUID,Nation> invites = new HashMap<>();
 
     public static NationData getNationInstance(ServerLevel serverLevel) {
         return serverLevel.getDataStorage()
@@ -43,10 +45,27 @@ public class NationData extends SavedData {
         return nation;
     }
 
+    public void sendInvites(List<GameProfile> profiles,Nation nation) {
+        for (GameProfile gameProfile : profiles) {
+            invites.put(gameProfile.getId(),nation);
+        }
+        setDirty();
+    }
+
+    public Nation getInviteForPlayer(ServerPlayer player) {
+        return invites.get(player.getUUID());
+    }
+
+    public void removeInvite(ServerPlayer player) {
+        invites.remove(player.getUUID());
+        setDirty();
+    }
+
     public boolean removeNation(String name) {
         Nation toRemove = nationsLookup.get(name);
         boolean b = nations.remove(toRemove);
         nationsLookup.remove(name);
+        setDirty();
         return b;
     }
 
