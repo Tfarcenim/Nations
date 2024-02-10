@@ -1,8 +1,11 @@
 package tfar.nations.platform;
 
+import com.mojang.authlib.GameProfile;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.common.util.FakePlayerFactory;
 import org.jetbrains.annotations.Nullable;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
@@ -49,5 +52,10 @@ public class ForgePlatformHelper implements IPlatformHelper {
         String s = tag.getString("nation");
         Nation nation = NationData.getDefaultNationsInstance(player.server).getNationByName(s);
         return nation;
+    }
+
+    @Override
+    public ServerPlayer getFakePlayer(ServerLevel level, GameProfile gameProfile) {
+        return FakePlayerFactory.get(level,gameProfile);
     }
 }

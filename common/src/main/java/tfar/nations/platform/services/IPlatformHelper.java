@@ -1,5 +1,8 @@
 package tfar.nations.platform.services;
 
+import com.mojang.authlib.GameProfile;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import tfar.nations.nation.Nation;
 
@@ -39,5 +42,7 @@ public interface IPlatformHelper {
 
     void setNation(ServerPlayer player, Nation nation);
     Nation getNation(ServerPlayer player);
+
+    ServerPlayer getFakePlayer(ServerLevel level, GameProfile gameProfile);
 
 }

@@ -1,6 +1,5 @@
 package tfar.nations.nation;
 
-import com.google.common.collect.Multimap;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -127,10 +126,11 @@ public class NationData extends SavedData {
         return true;
     }
 
-    public boolean leaveNationUUIDs(Collection<UUID> serverPlayers) {
+    public boolean leaveNationGameProfiles(MinecraftServer server, Collection<GameProfile> serverPlayers) {
         for (Nation nation : nations) {
-            nation.removeUUIDs(serverPlayers);
+            nation.removeGameProfiles(server,serverPlayers);
         }
+
         setDirty();
         return true;
     }

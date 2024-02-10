@@ -1,10 +1,12 @@
 package tfar.nations.nation;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
-import net.minecraft.nbt.Tag;
+import com.mojang.authlib.GameProfile;
+import net.minecraft.nbt.*;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.PlayerDataStorage;
+import tfar.nations.mixin.MinecraftServerAccessor;
 import tfar.nations.platform.Services;
 
 import java.util.*;
@@ -12,7 +14,7 @@ import java.util.*;
 public class Nation {
 
     private String name;
-    private final Set<UUID> members = new HashSet<>();
+    private final Set<GameProfile> members = new HashSet<>();
     private int color =0xffffff;
     private UUID owner;
 
@@ -30,8 +32,8 @@ public class Nation {
 
     public void addPlayers(Collection<ServerPlayer> players) {
         for (ServerPlayer player : players) {
-            UUID uuid = player.getUUID();
-            members.add(uuid);
+            GameProfile gameProfile = player.getGameProfile();
+            members.add(gameProfile);
             Services.PLATFORM.setNation(player,this);
         }
     }
@@ -51,16 +53,28 @@ public class Nation {
 
     public void removePlayers(Collection<ServerPlayer> players) {
         for (ServerPlayer player : players) {
-            UUID uuid = player.getUUID();
-            members.remove(uuid);
+            GameProfile gameProfile = player.getGameProfile();
+            members.remove(gameProfile);
             Services.PLATFORM.setNation(player,null);
         }
     }
 
-    public void removeUUIDs(Collection<UUID> uuids) {
-        for (UUID player : uuids) {
-            members.remove(player);//todo
-           // Services.PLATFORM.setNation(player,null);
+    public void removeGameProfiles(MinecraftServer server, Collection<GameProfile> gameProfiles) {
+        for (GameProfile gameProfile : gameProfiles) {
+            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("You have been exiled from "+name));
+                 Services.PLATFORM.setNation(player,null);
+            } else {
+                PlayerDataStorage playerDataStorage = ((MinecraftServerAccessor)server).getPlayerDataStorage();
+                ServerPlayer fakePlayer = Services.PLATFORM.getFakePlayer(server.overworld(),gameProfile);
+                CompoundTag nbt = playerDataStorage.load(fakePlayer);
+                if (nbt != null) {
+                    Services.PLATFORM.setNation(fakePlayer,null);
+                    playerDataStorage.save(fakePlayer);
+                }
+            }
+            members.remove(gameProfile);
         }
     }
 
@@ -72,8 +86,8 @@ public class Nation {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.putString("name",name);
         ListTag listTag = new ListTag();
-        for (UUID uuid : members) {
-            listTag.add(StringTag.valueOf(uuid.toString()));
+        for (GameProfile gameProfile : members) {
+            listTag.add(NbtUtils.writeGameProfile(new CompoundTag(),gameProfile));
         }
         compoundTag.put("members",listTag);
         compoundTag.putInt("color",color);
@@ -81,17 +95,17 @@ public class Nation {
         return compoundTag;
     }
 
-    public Set<UUID> getMembers() {
+    public Set<GameProfile> getMembers() {
         return members;
     }
 
     public static Nation loadStatic(CompoundTag tag) {
         Nation nation = new Nation();
         nation.name = tag.getString("name");
-        ListTag listTag = tag.getList("members", Tag.TAG_STRING);
+        ListTag listTag = tag.getList("members", Tag.TAG_COMPOUND);
         for (Tag tag1 : listTag) {
-            StringTag stringTag = (StringTag) tag1;
-            nation.members.add(UUID.fromString(stringTag.getAsString()));
+            CompoundTag stringTag = (CompoundTag) tag1;
+            nation.members.add(NbtUtils.readGameProfile(stringTag));
         }
         nation.color = tag.getInt("color");
         nation.owner = tag.getUUID("owner");

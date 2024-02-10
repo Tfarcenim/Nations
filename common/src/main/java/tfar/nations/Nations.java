@@ -9,7 +9,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.MinecraftServer;
@@ -19,7 +18,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
-import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tfar.nations.nation.Nation;
@@ -291,17 +289,22 @@ public class Nations {
                             .setCallback((index1, clickType1, actionType1) -> {
                                 SimpleGui exileGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
                                 exileGui.setTitle(Component.literal("Exile Players"));
-                                List<UUID> members = getAllTeamMembers(player,existingNation);
+                                List<GameProfile> members = getAllTeamMembers(player,existingNation);
                                 int i = 0;
-                                for (UUID uuid : members) {
+                                for (GameProfile gameProfile : members) {
                                     GuiElementBuilder elementBuilder = new GuiElementBuilder();
+                                    String name = gameProfile.getName();
+                                    if (player.server.getPlayerList().getPlayer(gameProfile.getId()) == null) {
+                                        name+=" (Offline)";
+                                    }
                                     exileGui.setSlot(i, elementBuilder
                                             .setItem(Items.PLAYER_HEAD)
-                                            .setSkullOwner(new GameProfile(uuid,""), player.server)
-                                            //.setName(invitePlayer.getName())
+                                            .setSkullOwner(gameProfile, player.server)
+                                            .setName(Component.literal(name))
                                             .setCallback(
                                                     (index2, type1, action1, gui) -> {
-                                                        nationData.leaveNationUUIDs(List.of(uuid));
+                                                        nationData.leaveNationGameProfiles(player.server, List.of(gameProfile));
+                                                        player.sendSystemMessage(Component.literal(gameProfile.getName()+" has been exiled"));
                                                         gui.close();
                                                     }));
                                 }
@@ -323,10 +326,10 @@ public class Nations {
         return allPlayers;
     }
 
-    private static List<UUID> getAllTeamMembers(ServerPlayer leader, Nation nation) {
-        Set<UUID> members = nation.getMembers();
-        List<UUID> list = new ArrayList<>(members);
-        list.remove(leader.getUUID());
+    private static List<GameProfile> getAllTeamMembers(ServerPlayer leader, Nation nation) {
+        Set<GameProfile> members = nation.getMembers();
+        List<GameProfile> list = new ArrayList<>(members);
+        list.remove(leader.getGameProfile());
         return list;
     }
 
