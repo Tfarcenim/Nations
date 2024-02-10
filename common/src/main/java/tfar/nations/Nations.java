@@ -15,9 +15,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.ChunkPos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tfar.nations.nation.Nation;
@@ -31,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.UnaryOperator;
 
 // This class is part of the common project meaning it is shared between all supported loaders. Code written here can only
 // import and access the vanilla codebase, libraries used by vanilla, and optionally third party libraries that provide
@@ -41,6 +44,7 @@ public class Nations {
     public static final String MOD_ID = "nations";
     public static final String MOD_NAME = "Nations";
     public static final Logger LOG = LoggerFactory.getLogger(MOD_NAME);
+
 
     // The loader specific projects are able to import and use any code from the common project. This allows you to
     // write the majority of your code here and load it from your loader specific projects. This example has some
@@ -60,6 +64,10 @@ public class Nations {
         //        LOG.info("Hello to examplemod");
         //    }
     }
+
+    public static final Item YES = Items.GREEN_STAINED_GLASS_PANE;
+    public static final Item NO = Items.RED_STAINED_GLASS_PANE;
+    public static final Item BLANK = Items.LIGHT_GRAY_STAINED_GLASS_PANE;
 
     public static void onCommandRegister(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal(MOD_ID)
@@ -120,7 +128,7 @@ public class Nations {
                 SimpleGui inviteGui = new SimpleGui(MenuType.HOPPER, player, false);
                 inviteGui.setTitle(Component.literal("Accept invite to " + invitedTo.getName() + " ?"));
                 inviteGui.setSlot(0, new GuiElementBuilder()
-                        .setItem(Items.GREEN_WOOL)
+                        .setItem(YES)
                         .setName(Component.literal("Yes"))
                         .setCallback((index, clickType, actionType) -> {
                             nationData.joinNation(invitedTo.getName(), List.of(player));
@@ -130,7 +138,7 @@ public class Nations {
                         })
                 );
                 inviteGui.setSlot(4, new GuiElementBuilder()
-                        .setItem(Items.RED_WOOL)
+                        .setItem(NO)
                         .setName(Component.literal("No"))
                         .setCallback((index, clickType, actionType) -> {
                             nationData.removeInvite(player);
@@ -145,7 +153,7 @@ public class Nations {
                 SimpleGui gui = new SimpleGui(MenuType.HOPPER, player, false);
                 gui.setTitle(Component.literal("Create Nation?"));
                 gui.setSlot(0, new GuiElementBuilder()
-                        .setItem(Items.GREEN_WOOL)
+                        .setItem(YES)
                         .setName(Component.literal("Yes"))
                         .setCallback((index, clickType, actionType) -> {
                             ServerPlayer serverPlayer = gui.getPlayer();
@@ -157,7 +165,7 @@ public class Nations {
                         })
                 );
                 gui.setSlot(4, new GuiElementBuilder()
-                        .setItem(Items.RED_WOOL)
+                        .setItem(NO)
                         .setName(Component.literal("No"))
                         .setCallback((index, clickType, actionType) -> gui.close())
                 );
@@ -185,7 +193,7 @@ public class Nations {
                     SimpleGui confirmGui = new SimpleGui(MenuType.HOPPER, player, false);
                     confirmGui.setTitle(Component.literal("Leave Nation?"));
                     confirmGui.setSlot(0, new GuiElementBuilder()
-                            .setItem(Items.GREEN_WOOL)
+                            .setItem(YES)
                             .setName(Component.literal("Yes"))
                             .setCallback((index1, clickType1, actionType1) -> {
                                 ServerPlayer serverPlayer = confirmGui.getPlayer();
@@ -195,7 +203,7 @@ public class Nations {
                             })
                     );
                     confirmGui.setSlot(4, new GuiElementBuilder()
-                            .setItem(Items.RED_WOOL)
+                            .setItem(NO)
                             .setName(Component.literal("No"))
                             .setCallback((index1, clickType1, actionType1) -> confirmGui.close())
                     );
@@ -215,7 +223,7 @@ public class Nations {
                     SimpleGui confirmGui = new SimpleGui(MenuType.HOPPER, player, false);
                     confirmGui.setTitle(Component.literal("Disband Nation?"));
                     confirmGui.setSlot(0, new GuiElementBuilder()
-                            .setItem(Items.GREEN_WOOL)
+                            .setItem(YES)
                             .setName(Component.literal("Yes"))
                             .setCallback((index1, clickType1, actionType1) -> {
                                 ServerPlayer serverPlayer = confirmGui.getPlayer();
@@ -225,7 +233,7 @@ public class Nations {
                             })
                     );
                     confirmGui.setSlot(4, new GuiElementBuilder()
-                            .setItem(Items.RED_WOOL)
+                            .setItem(NO)
                             .setName(Component.literal("No"))
                             .setCallback((index1, clickType1, actionType1) -> confirmGui.close())
                     );
@@ -317,8 +325,63 @@ public class Nations {
                 })
         );
 
+        teamLeaderMenu.setSlot(2,new GuiElementBuilder()
+                .setItem(Items.WHITE_BANNER)
+                .setName(Component.literal("Claim land"))
+                .setCallback((index, type, action) -> {
+                    SimpleGui claimGui = new SimpleGui(MenuType.GENERIC_9x6,player,false);
+                    claimGui.setTitle(Component.literal("Claim land"));
+                    ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+                    int index1 = 0;
+                    for (int z = -2 ; z < 4;z++) {
+                        for (int x = - 4; x < 5;x++) {
+                            ChunkPos offset = new ChunkPos(chunkPos.x +x,chunkPos.z + z);
+
+                            Nation claimed = nationData.getNationAtChunk(offset);
+                            Item icon = Items.LIGHT_GRAY_STAINED_GLASS_PANE;
+
+                            if (claimed!= null) {
+                                if (claimed == existingNation) icon = Items.GREEN_STAINED_GLASS_PANE;
+                                else {
+                                    icon = Items.RED_STAINED_GLASS_PANE;
+                                }
+                            }
+
+                            String nationName = claimed != null ? claimed.getName() : "Wilderness";
+
+                            GuiElementBuilder elementBuilder = new GuiElementBuilder()
+                                    .setItem(icon)
+                                    .setName(Component.literal(nationName+" (" +offset.x+","+offset.z+")"))
+                                    .setCallback((index2, type1, action1, gui) -> {
+                                        GuiElementInterface slot = gui.getSlot(index2);
+                                        ItemStack stack = slot.getItemStack();
+                                        if (stack.is(Items.LIGHT_GRAY_STAINED_GLASS_PANE)) {
+                                            ItemStack newClaim = new ItemStack(Items.GREEN_STAINED_GLASS_PANE);
+                                            newClaim.setHoverName(Component.literal(existingNation.getName()+" (" +offset.x+","+offset.z+")")
+                                                    .withStyle(NO_ITALIC));
+                                            ((GuiElement)slot).setItemStack(newClaim);
+
+
+                                        } else if (stack.is(Items.GREEN_STAINED_GLASS_PANE)) {
+                                            ItemStack wilderness = new ItemStack(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
+                                            wilderness.setHoverName(Component.literal("Wilderness (" +offset.x+","+offset.z+")").withStyle(NO_ITALIC));
+                                            ((GuiElement)slot).setItemStack(wilderness);
+                                        }
+                                    });
+
+                            claimGui.setSlot(index1,elementBuilder);
+                            index1++;
+                        }
+                    }
+
+                    claimGui.open();
+                })
+        );
+
         teamLeaderMenu.open();
     }
+
+    static final UnaryOperator<Style> NO_ITALIC = style -> style.withItalic(false);
 
     private static List<ServerPlayer> getUninvitedPlayers(ServerPlayer leader, Nation nation) {
         List<ServerPlayer> allPlayers = new ArrayList<>(leader.server.getPlayerList().getPlayers());

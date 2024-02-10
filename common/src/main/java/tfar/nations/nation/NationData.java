@@ -7,6 +7,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import tfar.nations.Nations;
@@ -17,6 +18,7 @@ public class NationData extends SavedData {
 
     private final List<Nation> nations = new ArrayList<>();
     private final Map<String,Nation> nationsLookup = new HashMap<>();
+    private final Map<ChunkPos,Nation> chunkLookup = new HashMap<>();
     private final Map<UUID,Nation> invites = new HashMap<>();
 
     public static NationData getNationInstance(ServerLevel serverLevel) {
@@ -44,6 +46,10 @@ public class NationData extends SavedData {
         return nation;
     }
 
+    public Nation getNationAtChunk(ChunkPos chunkPos) {
+        return chunkLookup.get(chunkPos);
+    }
+
     public void sendInvites(List<GameProfile> profiles,Nation nation) {
         for (GameProfile gameProfile : profiles) {
             invites.put(gameProfile.getId(),nation);
@@ -62,6 +68,12 @@ public class NationData extends SavedData {
 
     public boolean removeNation(String name) {
         Nation toRemove = nationsLookup.get(name);
+        if (toRemove == null) return false;
+
+        for (ChunkPos chunkPos : toRemove.getClaimed()) {
+            chunkLookup.remove(chunkPos);
+        }
+
         boolean b = nations.remove(toRemove);
         nationsLookup.remove(name);
         setDirty();
@@ -79,10 +91,12 @@ public class NationData extends SavedData {
     public void load(CompoundTag tag) {
         nations.clear();
         nationsLookup.clear();
+        chunkLookup.clear();
         ListTag listTag = tag.getList(Nations.MOD_ID, Tag.TAG_COMPOUND);
         for (Tag tag1 : listTag) {
             CompoundTag compoundTag = (CompoundTag) tag1;
             Nation nation = Nation.loadStatic(compoundTag);
+            nation.getClaimed().forEach(chunkPos -> chunkLookup.put(chunkPos,nation));
             nations.add(nation);
             nationsLookup.put(nation.getName(),nation);
         }

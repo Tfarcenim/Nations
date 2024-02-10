@@ -5,6 +5,7 @@ import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.storage.PlayerDataStorage;
 import tfar.nations.mixin.MinecraftServerAccessor;
 import tfar.nations.platform.Services;
@@ -15,8 +16,17 @@ public class Nation {
 
     private String name;
     private final Set<GameProfile> members = new HashSet<>();
+    private final Set<ChunkPos> claimed = new HashSet<>();
     private int color =0xffffff;
     private UUID owner;
+
+    public int getTotalPower() {
+        return 5 * (members.size() + 1);
+    }
+
+    public Set<ChunkPos> getClaimed() {
+        return claimed;
+    }
 
     public String getName() {
         return name;
@@ -92,6 +102,14 @@ public class Nation {
         compoundTag.put("members",listTag);
         compoundTag.putInt("color",color);
         compoundTag.putUUID("owner",owner);
+        ListTag claimedTag = new ListTag();
+        for (ChunkPos chunkPos : claimed) {
+            CompoundTag compound = new CompoundTag();
+            compound.putInt("x",chunkPos.x);
+            compound.putInt("z",chunkPos.z);
+            claimedTag.add(compound);
+        }
+        compoundTag.put("claimed",claimedTag);
         return compoundTag;
     }
 
@@ -109,6 +127,11 @@ public class Nation {
         }
         nation.color = tag.getInt("color");
         nation.owner = tag.getUUID("owner");
+        ListTag claimedTag = tag.getList("claimed",Tag.TAG_COMPOUND);
+        for (Tag tag1 : claimedTag) {
+            CompoundTag compound = (CompoundTag) tag1;
+            nation.claimed.add(new ChunkPos(compound.getInt("x"),compound.getInt("z")));
+        }
         return nation;
     }
 }
