@@ -57,6 +57,10 @@ public class Nation {
         return owner;
     }
 
+    public boolean canClaim() {
+        return claimed.size() < getTotalPower();
+    }
+
     public boolean isOwner(ServerPlayer player) {
         return player.getUUID().equals(owner);
     }

@@ -356,14 +356,21 @@ public class Nations {
                                         GuiElementInterface slot = gui.getSlot(index2);
                                         ItemStack stack = slot.getItemStack();
                                         if (stack.is(Items.LIGHT_GRAY_STAINED_GLASS_PANE)) {
-                                            ItemStack newClaim = new ItemStack(Items.GREEN_STAINED_GLASS_PANE);
-                                            newClaim.setHoverName(Component.literal(existingNation.getName()+" (" +offset.x+","+offset.z+")")
-                                                    .withStyle(NO_ITALIC));
-                                            ((GuiElement)slot).setItemStack(newClaim);
 
+                                            boolean checkPower = existingNation.canClaim();
+                                            if (checkPower) {
+                                                ItemStack newClaim = new ItemStack(Items.GREEN_STAINED_GLASS_PANE);
+                                                newClaim.setHoverName(Component.literal(existingNation.getName() + " (" + offset.x + "," + offset.z + ")")
+                                                        .withStyle(NO_ITALIC));
+                                                ((GuiElement) slot).setItemStack(newClaim);
+                                                nationData.addClaim(existingNation,offset);
+                                            } else {
+                                                player.sendSystemMessage(Component.literal("Insufficient nation power"));
+                                            }
 
                                         } else if (stack.is(Items.GREEN_STAINED_GLASS_PANE)) {
                                             ItemStack wilderness = new ItemStack(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
+                                            nationData.removeClaim(existingNation,offset);
                                             wilderness.setHoverName(Component.literal("Wilderness (" +offset.x+","+offset.z+")").withStyle(NO_ITALIC));
                                             ((GuiElement)slot).setItemStack(wilderness);
                                         }

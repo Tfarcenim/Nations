@@ -88,6 +88,18 @@ public class NationData extends SavedData {
         return nationsLookup.get(name);
     }
 
+    public void addClaim(Nation nation,ChunkPos chunkPos) {
+        nation.getClaimed().add(chunkPos);
+        chunkLookup.put(chunkPos,nation);
+        setDirty();
+    }
+
+    public void removeClaim(Nation nation,ChunkPos chunkPos) {
+        nation.getClaimed().remove(chunkPos);
+        chunkLookup.remove(chunkPos);
+        setDirty();
+    }
+
     public void load(CompoundTag tag) {
         nations.clear();
         nationsLookup.clear();
