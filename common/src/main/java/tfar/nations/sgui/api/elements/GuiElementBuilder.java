@@ -76,7 +76,7 @@ public class GuiElementBuilder implements GuiElementBuilderInterface<GuiElementB
         CompoundTag tag = stack.getOrCreateTag().copy();
 
         if (stack.hasCustomHoverName()) {
-            builder.setName((MutableComponent) stack.getHoverName());
+            builder.setName(stack.getHoverName());
             tag.getCompound("display").remove("Name");
         }
 

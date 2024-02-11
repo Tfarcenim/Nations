@@ -18,7 +18,9 @@ public class Nation {
     private final Set<GameProfile> members = new HashSet<>();
     private final Set<ChunkPos> claimed = new HashSet<>();
     private int color =0xffffff;
-    private UUID owner;
+    private GameProfile owner;
+    private final Set<String> allies = new HashSet<>();
+    private final Set<String> enemies = new HashSet<>();
 
     public int getTotalPower() {
         return 5 * (members.size() + 1);
@@ -49,11 +51,11 @@ public class Nation {
     }
 
     public void setOwner(ServerPlayer newOwner) {
-        this.owner = newOwner.getUUID();
+        this.owner = newOwner.getGameProfile();
         addPlayers(List.of(newOwner));
     }
 
-    public UUID getOwner() {
+    public GameProfile getOwner() {
         return owner;
     }
 
@@ -62,7 +64,7 @@ public class Nation {
     }
 
     public boolean isOwner(ServerPlayer player) {
-        return player.getUUID().equals(owner);
+        return player.getGameProfile().equals(owner);
     }
 
     public void removePlayers(Collection<ServerPlayer> players) {
@@ -105,7 +107,7 @@ public class Nation {
         }
         compoundTag.put("members",listTag);
         compoundTag.putInt("color",color);
-        compoundTag.putUUID("owner",owner);
+        compoundTag.put("owner",NbtUtils.writeGameProfile(new CompoundTag(),owner));
         ListTag claimedTag = new ListTag();
         for (ChunkPos chunkPos : claimed) {
             CompoundTag compound = new CompoundTag();
@@ -114,6 +116,21 @@ public class Nation {
             claimedTag.add(compound);
         }
         compoundTag.put("claimed",claimedTag);
+
+        ListTag alliedTag = new ListTag();
+        for (String string : allies) {
+            StringTag stringTag = StringTag.valueOf(string);
+            alliedTag.add(stringTag);
+        }
+        compoundTag.put("allies",alliedTag);
+
+        ListTag enemyTag = new ListTag();
+        for (String string : enemies) {
+            StringTag stringTag = StringTag.valueOf(string);
+            enemyTag.add(stringTag);
+        }
+        compoundTag.put("enemies",enemyTag);
+
         return compoundTag;
     }
 
@@ -130,11 +147,21 @@ public class Nation {
             nation.members.add(NbtUtils.readGameProfile(stringTag));
         }
         nation.color = tag.getInt("color");
-        nation.owner = tag.getUUID("owner");
+        nation.owner = NbtUtils.readGameProfile(tag.getCompound("owner"));
         ListTag claimedTag = tag.getList("claimed",Tag.TAG_COMPOUND);
         for (Tag tag1 : claimedTag) {
             CompoundTag compound = (CompoundTag) tag1;
             nation.claimed.add(new ChunkPos(compound.getInt("x"),compound.getInt("z")));
+        }
+        ListTag alliedTag = tag.getList("allies",Tag.TAG_STRING);
+        for (Tag tag1 : alliedTag) {
+            StringTag stringTag = (StringTag) tag1;
+            nation.allies.add(stringTag.getAsString());
+        }
+        ListTag enemiesTag = tag.getList("enemies",Tag.TAG_STRING);
+        for (Tag tag1 : enemiesTag) {
+            StringTag stringTag = (StringTag) tag1;
+            nation.allies.add(stringTag.getAsString());
         }
         return nation;
     }

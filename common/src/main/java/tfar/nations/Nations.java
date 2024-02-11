@@ -294,6 +294,7 @@ public class Nations {
                     managePlayers.setSlot(1, new GuiElementBuilder()
                             .setItem(Items.IRON_SWORD)
                             .setName(Component.literal("Exile Players"))
+                            .hideFlags()
                             .setCallback((index1, clickType1, actionType1) -> {
                                 SimpleGui exileGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
                                 exileGui.setTitle(Component.literal("Exile Players"));
@@ -348,6 +349,7 @@ public class Nations {
                             }
 
                             String nationName = claimed != null ? claimed.getName() : "Wilderness";
+                            boolean glow = offset.equals(chunkPos);
 
                             GuiElementBuilder elementBuilder = new GuiElementBuilder()
                                     .setItem(icon)
@@ -355,11 +357,17 @@ public class Nations {
                                     .setCallback((index2, type1, action1, gui) -> {
                                         GuiElementInterface slot = gui.getSlot(index2);
                                         ItemStack stack = slot.getItemStack();
+
+
                                         if (stack.is(Items.LIGHT_GRAY_STAINED_GLASS_PANE)) {
 
                                             boolean checkPower = existingNation.canClaim();
                                             if (checkPower) {
                                                 ItemStack newClaim = new ItemStack(Items.GREEN_STAINED_GLASS_PANE);
+                                                if (glow) {
+                                                    newClaim.enchant(Enchantments.UNBREAKING, 0);
+                                                    newClaim.getTag().putByte("HideFlags", (byte) ItemStack.TooltipPart.ENCHANTMENTS.getMask());
+                                                }
                                                 newClaim.setHoverName(Component.literal(existingNation.getName() + " (" + offset.x + "," + offset.z + ")")
                                                         .withStyle(NO_ITALIC));
                                                 ((GuiElement) slot).setItemStack(newClaim);
@@ -370,11 +378,21 @@ public class Nations {
 
                                         } else if (stack.is(Items.GREEN_STAINED_GLASS_PANE)) {
                                             ItemStack wilderness = new ItemStack(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
+
+                                            if (glow) {
+                                                wilderness.enchant(Enchantments.UNBREAKING, 0);
+                                                wilderness.getTag().putByte("HideFlags", (byte) ItemStack.TooltipPart.ENCHANTMENTS.getMask());
+                                            }
+
                                             nationData.removeClaim(existingNation,offset);
                                             wilderness.setHoverName(Component.literal("Wilderness (" +offset.x+","+offset.z+")").withStyle(NO_ITALIC));
                                             ((GuiElement)slot).setItemStack(wilderness);
                                         }
                                     });
+
+                            if (glow) {
+                                elementBuilder.glow();
+                            }
 
                             claimGui.setSlot(index1,elementBuilder);
                             index1++;
@@ -382,6 +400,54 @@ public class Nations {
                     }
 
                     claimGui.open();
+                })
+        );
+
+        teamLeaderMenu.setSlot(3,new GuiElementBuilder()
+                .setItem(Items.SHIELD)
+                .setName(Component.literal("Alliance/Enemy"))
+                .setCallback((index, type, action, gui) -> {
+                    SimpleGui politicsGui = new SimpleGui(MenuType.HOPPER,player,false);
+                    politicsGui.setTitle(Component.literal("Nation Politics"));
+                    politicsGui.setSlot(0,new GuiElementBuilder()
+                            .setItem(Items.FEATHER)
+                            .setName(Component.literal("Alliance"))
+                            .setCallback((index1, type1, action1, gui1) -> {
+
+                            })
+
+                    );
+
+                    politicsGui.setSlot(1,new GuiElementBuilder()
+                            .setItem(Items.NETHERITE_SWORD)
+                            .hideFlags()
+                            .setName(Component.literal("Enemy"))
+                            .setCallback((index1, type1, action1, gui1) -> {
+
+                            })
+
+                    );
+
+                    politicsGui.setSlot(2,new GuiElementBuilder()
+                            .setItem(Items.ENDER_EYE)
+                            .setName(Component.literal("Neutral"))
+                            .setCallback((index1, type1, action1, gui1) -> {
+
+                            })
+
+                    );
+
+                    politicsGui.setSlot(3,new GuiElementBuilder()
+                            .setItem(Items.BOOK)
+                            .setName(Component.literal("Status"))
+                            .setCallback((index1, type1, action1, gui1) -> {
+
+                            })
+
+                    );
+
+
+                    politicsGui.open();
                 })
         );
 
