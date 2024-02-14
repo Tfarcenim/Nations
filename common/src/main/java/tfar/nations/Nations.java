@@ -186,6 +186,8 @@ public class Nations {
     private static void openTeamMemberGui(NationData nationData, Nation existingNation, ServerPlayer player) {
         SimpleGui teamMemberMenu = new SimpleGui(MenuType.HOPPER,player,false);
         teamMemberMenu.setTitle(Component.literal("Nation Member Menu"));
+
+        teamMemberMenu.setSlot(0, ServerButtons.createNationsTop(player, nationData, existingNation));
         teamMemberMenu.setSlot(4,new GuiElementBuilder()
                 .setItem(Items.BARRIER)
                 .setName(Component.literal("Leave Nation"))
@@ -214,7 +216,7 @@ public class Nations {
     }
 
     private static void openTeamLeaderGui(NationData nationData, Nation existingNation, ServerPlayer player) {
-        SimpleGui teamLeaderMenu = new SimpleGui(MenuType.HOPPER, player, false);
+        SimpleGui teamLeaderMenu = new SimpleGui(MenuType.GENERIC_9x1, player, false);
         teamLeaderMenu.setTitle(Component.literal("Nation Leader Menu"));
         teamLeaderMenu.setSlot(0, new GuiElementBuilder()
                 .setItem(Items.BARRIER)
@@ -474,7 +476,7 @@ public class Nations {
                                                 .setSkullOwner(nation.getOwner(), player.server)
                                                 .setName(Component.literal(nation.getOwner().getName()))
                                                 .setCallback((index2, type2, action2, gui2) -> {
-                                                    nationData.sendAllyInvites(existingNation, nation);
+                                                    nationData.makeEnemy(existingNation, nation);
                                                     gui2.close();
                                                 })
                                         );
@@ -528,16 +530,14 @@ public class Nations {
                                         );
                                     }
                                     statusGui.open();
-
                                 })
-
                         );
-
-
                         politicsGui.open();
                     }
                 })
         );
+
+        teamLeaderMenu.setSlot(4, ServerButtons.createNationsTop(player, nationData, existingNation));
 
         teamLeaderMenu.open();
     }

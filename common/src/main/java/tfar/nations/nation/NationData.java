@@ -64,6 +64,14 @@ public class NationData extends SavedData {
         allyInvites.put(toNation,fromNation);
     }
 
+    public void makeEnemy(Nation fromNation,Nation toNation) {
+        fromNation.getEnemies().add(toNation.getName());
+        toNation.getEnemies().add(fromNation.getName());
+        fromNation.getAllies().remove(toNation.getName());
+        toNation.getAllies().remove(fromNation.getName());
+        setDirty();
+    }
+
     public void makeNeutral(Nation fromNation,Nation toNation) {
         fromNation.getEnemies().remove(toNation.getName());
         fromNation.getAllies().remove(toNation.getName());
