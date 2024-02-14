@@ -405,49 +405,137 @@ public class Nations {
 
         teamLeaderMenu.setSlot(3,new GuiElementBuilder()
                 .setItem(Items.SHIELD)
-                .setName(Component.literal("Alliance/Enemy"))
+                .setName(Component.literal("Nation Politics"))
                 .setCallback((index, type, action, gui) -> {
-                    SimpleGui politicsGui = new SimpleGui(MenuType.HOPPER,player,false);
-                    politicsGui.setTitle(Component.literal("Nation Politics"));
-                    politicsGui.setSlot(0,new GuiElementBuilder()
-                            .setItem(Items.FEATHER)
-                            .setName(Component.literal("Alliance"))
-                            .setCallback((index1, type1, action1, gui1) -> {
 
-                            })
+                    Nation allianceInvite = nationData.getAllianceInvite(existingNation);
 
-                    );
+                    if (allianceInvite != null) {
+                            SimpleGui inviteGui = new SimpleGui(MenuType.HOPPER, player, false);
+                            inviteGui.setTitle(Component.literal("Accept alliance invite to " + allianceInvite.getName() + " ?"));
+                            inviteGui.setSlot(0, new GuiElementBuilder()
+                                    .setItem(YES)
+                                    .setName(Component.literal("Yes"))
+                                    .setCallback((index1, clickType, actionType) -> {
+                                        nationData.createAllianceBetween(allianceInvite,existingNation);
+                                        nationData.removeAllyInvite(allianceInvite,existingNation);
+                                        player.sendSystemMessage(Component.literal("You are now allied with " + allianceInvite.getName() + " nation"), false);
+                                        inviteGui.close();
+                                    })
+                            );
+                            inviteGui.setSlot(4, new GuiElementBuilder()
+                                    .setItem(NO)
+                                    .setName(Component.literal("No"))
+                                    .setCallback((index1, clickType, actionType) -> {
+                                        nationData.removeAllyInvite(allianceInvite,existingNation);
+                                        inviteGui.close();
+                                    })
+                            );
+                            inviteGui.open();
+                    } else {
 
-                    politicsGui.setSlot(1,new GuiElementBuilder()
-                            .setItem(Items.NETHERITE_SWORD)
-                            .hideFlags()
-                            .setName(Component.literal("Enemy"))
-                            .setCallback((index1, type1, action1, gui1) -> {
+                        SimpleGui politicsGui = new SimpleGui(MenuType.HOPPER, player, false);
+                        politicsGui.setTitle(Component.literal("Nation Politics"));
+                        politicsGui.setSlot(0, new GuiElementBuilder()
+                                .setItem(Items.FEATHER)
+                                .setName(Component.literal("Make Alliance"))
+                                .setCallback((index1, type1, action1, gui1) -> {
+                                    SimpleGui allianceGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
+                                    allianceGui.setTitle(Component.literal("Make Alliance"));
+                                    List<Nation> nonAlliedLeaders = nationData.getNonAllianceNations(existingNation);
+                                    for (int i = 0; i < nonAlliedLeaders.size(); i++) {
+                                        Nation nation = nonAlliedLeaders.get(i);
+                                        allianceGui.setSlot(i, new GuiElementBuilder(Items.PLAYER_HEAD)
+                                                .setSkullOwner(nation.getOwner(), player.server)
+                                                .setName(Component.literal(nation.getOwner().getName()))
 
-                            })
+                                                .setCallback((index2, type2, action2, gui2) -> {
+                                                    nationData.sendAllyInvites(existingNation, nation);
+                                                    gui2.close();
+                                                })
+                                        );
+                                    }
+                                    allianceGui.open();
+                                })
 
-                    );
+                        );
 
-                    politicsGui.setSlot(2,new GuiElementBuilder()
-                            .setItem(Items.ENDER_EYE)
-                            .setName(Component.literal("Neutral"))
-                            .setCallback((index1, type1, action1, gui1) -> {
+                        politicsGui.setSlot(1, new GuiElementBuilder()
+                                .setItem(Items.NETHERITE_SWORD)
+                                .hideFlags()
+                                .setName(Component.literal("Make Enemy"))
+                                .setCallback((index1, type1, action1, gui1) -> {
+                                    SimpleGui enemyGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
+                                    enemyGui.setTitle(Component.literal("Make Enemy"));
+                                    List<Nation> nonAlliedLeaders = nationData.getNonEnemyNations(existingNation);
+                                    for (int i = 0; i < nonAlliedLeaders.size(); i++) {
+                                        Nation nation = nonAlliedLeaders.get(i);
+                                        enemyGui.setSlot(i, new GuiElementBuilder(Items.PLAYER_HEAD)
+                                                .setSkullOwner(nation.getOwner(), player.server)
+                                                .setName(Component.literal(nation.getOwner().getName()))
+                                                .setCallback((index2, type2, action2, gui2) -> {
+                                                    nationData.sendAllyInvites(existingNation, nation);
+                                                    gui2.close();
+                                                })
+                                        );
+                                    }
+                                    enemyGui.open();
+                                })
 
-                            })
+                        );
 
-                    );
+                        politicsGui.setSlot(2, new GuiElementBuilder()
+                                .setItem(Items.ENDER_EYE)
+                                .setName(Component.literal("Make Neutral"))
+                                .setCallback((index1, type1, action1, gui1) -> {
 
-                    politicsGui.setSlot(3,new GuiElementBuilder()
-                            .setItem(Items.BOOK)
-                            .setName(Component.literal("Status"))
-                            .setCallback((index1, type1, action1, gui1) -> {
+                                    SimpleGui enemyGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
+                                    enemyGui.setTitle(Component.literal("Make Neutral"));
+                                    List<Nation> nonAlliedLeaders = nationData.getNonNeutralNations(existingNation);
+                                    for (int i = 0; i < nonAlliedLeaders.size(); i++) {
+                                        Nation nation = nonAlliedLeaders.get(i);
+                                        boolean isFriendly = nation.isAlly(existingNation);
+                                        enemyGui.setSlot(i, new GuiElementBuilder(Items.PLAYER_HEAD)
+                                                .setSkullOwner(nation.getOwner(), player.server)
+                                                .setName(Component.literal(nation.getOwner().getName() + " - "+(isFriendly ? "Allied" : "Enemy")))
+                                                .setCallback((index2, type2, action2, gui2) -> {
+                                                    nationData.makeNeutral(existingNation, nation);
+                                                    gui2.close();
+                                                })
+                                        );
+                                    }
+                                    enemyGui.open();
 
-                            })
+                                })
 
-                    );
+                        );
+
+                        politicsGui.setSlot(3, new GuiElementBuilder()
+                                .setItem(Items.BOOK)
+                                .setName(Component.literal("Nation Status"))
+                                .setCallback((index1, type1, action1, gui1) -> {
+                                    SimpleGui statusGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
+                                    statusGui.setTitle(Component.literal("Nation Status"));
+                                    List<Nation> nonAlliedLeaders = nationData.getNonNeutralNations(existingNation);
+                                    for (int i = 0; i < nonAlliedLeaders.size(); i++) {
+                                        Nation nation = nonAlliedLeaders.get(i);
+                                        boolean isFriendly = nation.isAlly(existingNation);
+                                        statusGui.setSlot(i, new GuiElementBuilder(Items.PLAYER_HEAD)
+                                                .setSkullOwner(nation.getOwner(), player.server)
+                                                .setName(Component.literal(nation.getOwner().getName() + " - "+(isFriendly ? "Allied" : "Enemy")))
+                                                .setCallback((index2, type2, action2, gui2) -> {
+                                                })
+                                        );
+                                    }
+                                    statusGui.open();
+
+                                })
+
+                        );
 
 
-                    politicsGui.open();
+                        politicsGui.open();
+                    }
                 })
         );
 

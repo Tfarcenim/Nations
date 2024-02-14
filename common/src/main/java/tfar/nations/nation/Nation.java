@@ -34,6 +34,22 @@ public class Nation {
         return name;
     }
 
+    public Set<String> getAllies() {
+        return allies;
+    }
+
+    public Set<String> getEnemies() {
+        return enemies;
+    }
+
+    public boolean isAlly(Nation other) {
+        return allies.contains(other.name);
+    }
+
+    public boolean isEnemy(Nation other) {
+        return enemies.contains(other.name);
+    }
+
     public int getColor() {
         return color;
     }
@@ -161,7 +177,7 @@ public class Nation {
         ListTag enemiesTag = tag.getList("enemies",Tag.TAG_STRING);
         for (Tag tag1 : enemiesTag) {
             StringTag stringTag = (StringTag) tag1;
-            nation.allies.add(stringTag.getAsString());
+            nation.enemies.add(stringTag.getAsString());
         }
         return nation;
     }

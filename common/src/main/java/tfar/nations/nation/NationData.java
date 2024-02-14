@@ -10,9 +10,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import org.jetbrains.annotations.Nullable;
 import tfar.nations.Nations;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class NationData extends SavedData {
 
@@ -20,6 +22,7 @@ public class NationData extends SavedData {
     private final Map<String,Nation> nationsLookup = new HashMap<>();
     private final Map<ChunkPos,Nation> chunkLookup = new HashMap<>();
     private final Map<UUID,Nation> invites = new HashMap<>();
+    private final Map<Nation,Nation> allyInvites = new HashMap<>();
 
     public static NationData getNationInstance(ServerLevel serverLevel) {
         return serverLevel.getDataStorage()
@@ -55,6 +58,23 @@ public class NationData extends SavedData {
             invites.put(gameProfile.getId(),nation);
         }
         setDirty();
+    }
+
+    public void sendAllyInvites(Nation fromNation,Nation toNation) {
+        allyInvites.put(toNation,fromNation);
+    }
+
+    public void makeNeutral(Nation fromNation,Nation toNation) {
+        fromNation.getEnemies().remove(toNation.getName());
+        fromNation.getAllies().remove(toNation.getName());
+
+        toNation.getEnemies().remove(fromNation.getName());
+        toNation.getAllies().remove(fromNation.getName());
+        setDirty();
+    }
+
+    public void removeAllyInvite(Nation fromNation,Nation toNation) {
+        allyInvites.remove(toNation);
     }
 
     public Nation getInviteForPlayer(ServerPlayer player) {
@@ -124,6 +144,11 @@ public class NationData extends SavedData {
         return pCompoundTag;
     }
 
+    public void createAllianceBetween(Nation nation1,Nation nation2) {
+        nation1.getAllies().add(nation2.getName());
+        nation2.getAllies().add(nation1.getName());
+        setDirty();
+    }
 
     public boolean joinNation(String name, Collection<ServerPlayer> serverPlayers) {
         Nation nation = getNationByName(name);
@@ -143,6 +168,43 @@ public class NationData extends SavedData {
         }
         return false;
     }
+
+    public List<Nation> getNonAllianceNations(Nation nation) {
+        List<String> otherNations = new ArrayList<>(nationsLookup.keySet());
+        otherNations.remove(nation.getName());
+        otherNations.removeAll(nation.getAllies());
+        List<Nation> nations1 = otherNations.stream().map(nationsLookup::get).collect(Collectors.toList());
+        return nations1;
+    }
+
+    @Nullable
+    public Nation getAllianceInvite(Nation toNation) {
+        return allyInvites.get(toNation);
+    }
+
+    public List<Nation> getNonEnemyNations(Nation nation) {
+        List<String> otherNations = new ArrayList<>(nationsLookup.keySet());
+        otherNations.remove(nation.getName());
+        otherNations.removeAll(nation.getEnemies());
+        List<Nation> nations1 = otherNations.stream().map(nationsLookup::get).collect(Collectors.toList());
+        return nations1;
+    }
+
+    public List<Nation> getNonNeutralNations(Nation nation) {
+        List<String> otherNations = new ArrayList<>(nationsLookup.keySet());
+        otherNations.remove(nation.getName());
+
+        for (String s : nationsLookup.keySet()) {
+            if (!nation.getAllies().contains(s) && !nation.getEnemies().contains(s)) {
+                otherNations.remove(s);
+            }
+        }
+
+        List<Nation> nations1 = otherNations.stream().map(nationsLookup::get).collect(Collectors.toList());
+        return nations1;
+    }
+
+
 
     public boolean leaveNation(Collection<ServerPlayer> serverPlayers) {
         for (Nation nation : nations) {
