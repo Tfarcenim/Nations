@@ -212,7 +212,15 @@ public class NationData extends SavedData {
         return nations1;
     }
 
+    public void promote(GameProfile gameProfile,Nation nation) {
+        nation.promote(gameProfile);
+        setDirty();
+    }
 
+    public void demote(GameProfile gameProfile,Nation nation) {
+        nation.demote(gameProfile);
+        setDirty();
+    }
 
     public boolean leaveNation(Collection<ServerPlayer> serverPlayers) {
         for (Nation nation : nations) {

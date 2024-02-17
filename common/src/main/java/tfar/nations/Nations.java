@@ -174,7 +174,11 @@ public class Nations {
                 if (existingNation.isOwner(player)) {
                     openTeamLeaderGui(nationData, existingNation, player);
                 } else {
-                    openTeamMemberGui(nationData,existingNation,player);
+                    if (existingNation.isOfficer(player)) {
+                        openTeamOfficerMenu(nationData, existingNation, player);
+                    } else {
+                        openTeamMemberMenu(nationData, existingNation, player);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -183,12 +187,21 @@ public class Nations {
         return 1;
     }
 
-    private static void openTeamMemberGui(NationData nationData, Nation existingNation, ServerPlayer player) {
-        SimpleGui teamMemberMenu = new SimpleGui(MenuType.HOPPER,player,false);
+    private static void openTeamOfficerMenu(NationData nationData, Nation existingNation, ServerPlayer player) {
+        SimpleGui teamOfficerMenu = new SimpleGui(MenuType.HOPPER, player, false);
+        teamOfficerMenu.setTitle(Component.literal("Nation Officer Menu"));
+        teamOfficerMenu.setSlot(0, ServerButtons.managePlayersButton(player, nationData, existingNation));
+        teamOfficerMenu.setSlot(2, ServerButtons.topNationsButton(player, nationData));
+
+        teamOfficerMenu.open();
+    }
+
+    private static void openTeamMemberMenu(NationData nationData, Nation existingNation, ServerPlayer player) {
+        SimpleGui teamMemberMenu = new SimpleGui(MenuType.HOPPER, player, false);
         teamMemberMenu.setTitle(Component.literal("Nation Member Menu"));
 
-        teamMemberMenu.setSlot(0, ServerButtons.createNationsTop(player, nationData, existingNation));
-        teamMemberMenu.setSlot(4,new GuiElementBuilder()
+        teamMemberMenu.setSlot(0, ServerButtons.topNationsButton(player, nationData));
+        teamMemberMenu.setSlot(1, new GuiElementBuilder()
                 .setItem(Items.BARRIER)
                 .setName(Component.literal("Leave Nation"))
                 .setCallback((index, type, action) -> {
@@ -242,108 +255,24 @@ public class Nations {
                     confirmGui.open();
                 }));
 
-        teamLeaderMenu.setSlot(1, new GuiElementBuilder()
-                .setItem(Items.LEAD)
-                .setName(Component.literal("Manage Players"))
-                .setCallback((index, type, action) -> {
-                    SimpleGui managePlayers = new SimpleGui(MenuType.HOPPER, player, false);
-                    managePlayers.setTitle(Component.literal("Manage Players"));
+        teamLeaderMenu.setSlot(1, ServerButtons.managePlayersButton(player, nationData, existingNation));
 
-                    managePlayers.setSlot(0, new GuiElementBuilder()
-                            .setItem(Items.PAPER)
-                            .setName(Component.literal("Invite Players"))
-                            .setCallback((index1, clickType1, actionType1) -> {
-                                SimpleGui inviteGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
-
-                                inviteGui.setTitle(Component.literal("Invite Players"));
-                                List<ServerPlayer> eligible = getUninvitedPlayers(player, existingNation);
-                                int i = 0;
-                                for (ServerPlayer invitePlayer : eligible) {
-                                    GuiElementBuilder elementBuilder = new GuiElementBuilder();
-                                    inviteGui.setSlot(i, elementBuilder
-                                            .setItem(Items.PLAYER_HEAD)
-                                            .setSkullOwner(invitePlayer.getGameProfile(), player.server)
-                                            .setName(invitePlayer.getName())
-                                            .setCallback(
-                                                    (index2, type1, action1, gui) -> {
-                                                        nationData.sendInvites(List.of(invitePlayer.getGameProfile()), existingNation);
-                                                        gui.close();
-                                                    }));
-                                }
-
-                           /*     inviteGui.setSlot(26, new GuiElementBuilder()
-                                        .setItem(Items.FEATHER)
-                                        .setName(Component.literal("Send Invites"))
-                                        .setCallback((index2, type1, action1, gui) -> {
-                                            List<GameProfile> actuallyInvite = new ArrayList<>();
-                                            for (int j = 0; j < eligible.size();j++) {
-                                                GuiElementInterface slot = gui.getSlot(j);
-                                                if (slot != null) {
-                                                    if (slot.getItemStack().hasFoil()) {
-                                                        GameProfile gameProfile = NbtUtils.readGameProfile(slot.getItemStack()
-                                                                .getTag().getCompound(SkullBlockEntity.TAG_SKULL_OWNER));
-                                                        actuallyInvite.add(gameProfile);
-                                                    }
-                                                }
-                                            }
-                                            nationData.sendInvites(actuallyInvite,existingNation);
-                                        })
-                                );*/
-
-                                inviteGui.open();
-                            }));
-
-                    managePlayers.setSlot(1, new GuiElementBuilder()
-                            .setItem(Items.IRON_SWORD)
-                            .setName(Component.literal("Exile Players"))
-                            .hideFlags()
-                            .setCallback((index1, clickType1, actionType1) -> {
-                                SimpleGui exileGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
-                                exileGui.setTitle(Component.literal("Exile Players"));
-                                List<GameProfile> members = getAllTeamMembers(player,existingNation);
-                                int i = 0;
-                                for (GameProfile gameProfile : members) {
-                                    GuiElementBuilder elementBuilder = new GuiElementBuilder();
-                                    String name = gameProfile.getName();
-                                    if (player.server.getPlayerList().getPlayer(gameProfile.getId()) == null) {
-                                        name+=" (Offline)";
-                                    }
-                                    exileGui.setSlot(i, elementBuilder
-                                            .setItem(Items.PLAYER_HEAD)
-                                            .setSkullOwner(gameProfile, player.server)
-                                            .setName(Component.literal(name))
-                                            .setCallback(
-                                                    (index2, type1, action1, gui) -> {
-                                                        nationData.leaveNationGameProfiles(player.server, List.of(gameProfile));
-                                                        player.sendSystemMessage(Component.literal(gameProfile.getName()+" has been exiled"));
-                                                        gui.close();
-                                                    }));
-                                }
-
-                                exileGui.open();
-
-                            }));
-
-                    managePlayers.open();
-                })
-        );
-
-        teamLeaderMenu.setSlot(2,new GuiElementBuilder()
+        teamLeaderMenu.setSlot(2, new GuiElementBuilder()
                 .setItem(Items.WHITE_BANNER)
                 .setName(Component.literal("Claim land"))
                 .setCallback((index, type, action) -> {
-                    SimpleGui claimGui = new SimpleGui(MenuType.GENERIC_9x6,player,false);
+                    SimpleGui claimGui = new SimpleGui(MenuType.GENERIC_9x6, player, false);
                     claimGui.setTitle(Component.literal("Claim land"));
                     ChunkPos chunkPos = new ChunkPos(player.blockPosition());
                     int index1 = 0;
-                    for (int z = -2 ; z < 4;z++) {
-                        for (int x = - 4; x < 5;x++) {
-                            ChunkPos offset = new ChunkPos(chunkPos.x +x,chunkPos.z + z);
+                    for (int z = -2; z < 4; z++) {
+                        for (int x = -4; x < 5; x++) {
+                            ChunkPos offset = new ChunkPos(chunkPos.x + x, chunkPos.z + z);
 
                             Nation claimed = nationData.getNationAtChunk(offset);
                             Item icon = Items.LIGHT_GRAY_STAINED_GLASS_PANE;
 
-                            if (claimed!= null) {
+                            if (claimed != null) {
                                 if (claimed == existingNation) icon = Items.GREEN_STAINED_GLASS_PANE;
                                 else {
                                     icon = Items.RED_STAINED_GLASS_PANE;
@@ -355,7 +284,7 @@ public class Nations {
 
                             GuiElementBuilder elementBuilder = new GuiElementBuilder()
                                     .setItem(icon)
-                                    .setName(Component.literal(nationName+" (" +offset.x+","+offset.z+")"))
+                                    .setName(Component.literal(nationName + " (" + offset.x + "," + offset.z + ")"))
                                     .setCallback((index2, type1, action1, gui) -> {
                                         GuiElementInterface slot = gui.getSlot(index2);
                                         ItemStack stack = slot.getItemStack();
@@ -373,7 +302,7 @@ public class Nations {
                                                 newClaim.setHoverName(Component.literal(existingNation.getName() + " (" + offset.x + "," + offset.z + ")")
                                                         .withStyle(NO_ITALIC));
                                                 ((GuiElement) slot).setItemStack(newClaim);
-                                                nationData.addClaim(existingNation,offset);
+                                                nationData.addClaim(existingNation, offset);
                                             } else {
                                                 player.sendSystemMessage(Component.literal("Insufficient nation power"));
                                             }
@@ -386,9 +315,9 @@ public class Nations {
                                                 wilderness.getTag().putByte("HideFlags", (byte) ItemStack.TooltipPart.ENCHANTMENTS.getMask());
                                             }
 
-                                            nationData.removeClaim(existingNation,offset);
-                                            wilderness.setHoverName(Component.literal("Wilderness (" +offset.x+","+offset.z+")").withStyle(NO_ITALIC));
-                                            ((GuiElement)slot).setItemStack(wilderness);
+                                            nationData.removeClaim(existingNation, offset);
+                                            wilderness.setHoverName(Component.literal("Wilderness (" + offset.x + "," + offset.z + ")").withStyle(NO_ITALIC));
+                                            ((GuiElement) slot).setItemStack(wilderness);
                                         }
                                     });
 
@@ -396,7 +325,7 @@ public class Nations {
                                 elementBuilder.glow();
                             }
 
-                            claimGui.setSlot(index1,elementBuilder);
+                            claimGui.setSlot(index1, elementBuilder);
                             index1++;
                         }
                     }
@@ -405,7 +334,7 @@ public class Nations {
                 })
         );
 
-        teamLeaderMenu.setSlot(3,new GuiElementBuilder()
+        teamLeaderMenu.setSlot(3, new GuiElementBuilder()
                 .setItem(Items.SHIELD)
                 .setName(Component.literal("Nation Politics"))
                 .setCallback((index, type, action, gui) -> {
@@ -413,27 +342,27 @@ public class Nations {
                     Nation allianceInvite = nationData.getAllianceInvite(existingNation);
 
                     if (allianceInvite != null) {
-                            SimpleGui inviteGui = new SimpleGui(MenuType.HOPPER, player, false);
-                            inviteGui.setTitle(Component.literal("Accept alliance invite to " + allianceInvite.getName() + " ?"));
-                            inviteGui.setSlot(0, new GuiElementBuilder()
-                                    .setItem(YES)
-                                    .setName(Component.literal("Yes"))
-                                    .setCallback((index1, clickType, actionType) -> {
-                                        nationData.createAllianceBetween(allianceInvite,existingNation);
-                                        nationData.removeAllyInvite(allianceInvite,existingNation);
-                                        player.sendSystemMessage(Component.literal("You are now allied with " + allianceInvite.getName() + " nation"), false);
-                                        inviteGui.close();
-                                    })
-                            );
-                            inviteGui.setSlot(4, new GuiElementBuilder()
-                                    .setItem(NO)
-                                    .setName(Component.literal("No"))
-                                    .setCallback((index1, clickType, actionType) -> {
-                                        nationData.removeAllyInvite(allianceInvite,existingNation);
-                                        inviteGui.close();
-                                    })
-                            );
-                            inviteGui.open();
+                        SimpleGui inviteGui = new SimpleGui(MenuType.HOPPER, player, false);
+                        inviteGui.setTitle(Component.literal("Accept alliance invite to " + allianceInvite.getName() + " ?"));
+                        inviteGui.setSlot(0, new GuiElementBuilder()
+                                .setItem(YES)
+                                .setName(Component.literal("Yes"))
+                                .setCallback((index1, clickType, actionType) -> {
+                                    nationData.createAllianceBetween(allianceInvite, existingNation);
+                                    nationData.removeAllyInvite(allianceInvite, existingNation);
+                                    player.sendSystemMessage(Component.literal("You are now allied with " + allianceInvite.getName() + " nation"), false);
+                                    inviteGui.close();
+                                })
+                        );
+                        inviteGui.setSlot(4, new GuiElementBuilder()
+                                .setItem(NO)
+                                .setName(Component.literal("No"))
+                                .setCallback((index1, clickType, actionType) -> {
+                                    nationData.removeAllyInvite(allianceInvite, existingNation);
+                                    inviteGui.close();
+                                })
+                        );
+                        inviteGui.open();
                     } else {
 
                         SimpleGui politicsGui = new SimpleGui(MenuType.HOPPER, player, false);
@@ -499,7 +428,7 @@ public class Nations {
                                         boolean isFriendly = nation.isAlly(existingNation);
                                         enemyGui.setSlot(i, new GuiElementBuilder(Items.PLAYER_HEAD)
                                                 .setSkullOwner(nation.getOwner(), player.server)
-                                                .setName(Component.literal(nation.getOwner().getName() + " - "+(isFriendly ? "Allied" : "Enemy")))
+                                                .setName(Component.literal(nation.getOwner().getName() + " - " + (isFriendly ? "Allied" : "Enemy")))
                                                 .setCallback((index2, type2, action2, gui2) -> {
                                                     nationData.makeNeutral(existingNation, nation);
                                                     gui2.close();
@@ -524,7 +453,7 @@ public class Nations {
                                         boolean isFriendly = nation.isAlly(existingNation);
                                         statusGui.setSlot(i, new GuiElementBuilder(Items.PLAYER_HEAD)
                                                 .setSkullOwner(nation.getOwner(), player.server)
-                                                .setName(Component.literal(nation.getOwner().getName() + " - "+(isFriendly ? "Allied" : "Enemy")))
+                                                .setName(Component.literal(nation.getOwner().getName() + " - " + (isFriendly ? "Allied" : "Enemy")))
                                                 .setCallback((index2, type2, action2, gui2) -> {
                                                 })
                                         );
@@ -537,20 +466,20 @@ public class Nations {
                 })
         );
 
-        teamLeaderMenu.setSlot(4, ServerButtons.createNationsTop(player, nationData, existingNation));
+        teamLeaderMenu.setSlot(4, ServerButtons.topNationsButton(player, nationData));
 
         teamLeaderMenu.open();
     }
 
     static final UnaryOperator<Style> NO_ITALIC = style -> style.withItalic(false);
 
-    private static List<ServerPlayer> getUninvitedPlayers(ServerPlayer leader, Nation nation) {
+    static List<ServerPlayer> getUninvitedPlayers(ServerPlayer leader, Nation nation) {
         List<ServerPlayer> allPlayers = new ArrayList<>(leader.server.getPlayerList().getPlayers());
         allPlayers.removeIf(player -> Services.PLATFORM.getNation(player) != null);
         return allPlayers;
     }
 
-    private static List<GameProfile> getAllTeamMembers(ServerPlayer leader, Nation nation) {
+    static List<GameProfile> getAllTeamMembersExceptLeader(ServerPlayer leader, Nation nation) {
         Set<GameProfile> members = nation.getMembers();
         List<GameProfile> list = new ArrayList<>(members);
         list.remove(leader.getGameProfile());

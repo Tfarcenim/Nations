@@ -1,6 +1,8 @@
 package tfar.nations.nation;
 
 import com.mojang.authlib.GameProfile;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -15,7 +17,7 @@ import java.util.*;
 public class Nation {
 
     private String name;
-    private final Set<GameProfile> members = new HashSet<>();
+    private final Object2IntMap<GameProfile> members = new Object2IntOpenHashMap<>();
     private final Set<ChunkPos> claimed = new HashSet<>();
     private int color =0xffffff;
     private GameProfile owner;
@@ -50,6 +52,18 @@ public class Nation {
         return enemies.contains(other.name);
     }
 
+    public List<GameProfile> getPromotable(ServerPlayer promoter) {
+        List<GameProfile> promotable = new ArrayList<>(members.keySet());
+        promotable.remove(owner);//remove owner from promotion
+        if (!isOwner(promoter)) {
+            GameProfile promoterProfile = promoter.getGameProfile();
+            promotable.remove(promoterProfile);//remove self from promotion
+            int rank = members.getInt(promoterProfile);
+            promotable.removeIf(profile -> rank <= members.getInt(profile));
+        }
+        return promotable;
+    }
+
     public int getColor() {
         return color;
     }
@@ -61,7 +75,7 @@ public class Nation {
     public void addPlayers(Collection<ServerPlayer> players) {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
-            members.add(gameProfile);
+            members.put(gameProfile,0);
             Services.PLATFORM.setNation(player,this);
         }
     }
@@ -69,6 +83,26 @@ public class Nation {
     public void setOwner(ServerPlayer newOwner) {
         this.owner = newOwner.getGameProfile();
         addPlayers(List.of(newOwner));
+        members.put(owner,2);
+    }
+
+    public boolean isOfficer(ServerPlayer player) {
+        return members.getInt(player.getGameProfile()) > 0;
+    }
+
+    public int getRank(GameProfile profile) {
+        return members.getInt(profile);
+    }
+    public void demote(GameProfile profile) {
+        if (members.containsKey(profile)) {
+            members.put(profile, members.getInt(profile) - 1);
+        }
+    }
+
+    public void promote(GameProfile profile) {
+        if (members.containsKey(profile)) {
+            members.put(profile,members.getInt(profile) + 1);
+        }
     }
 
     public GameProfile getOwner() {
@@ -118,10 +152,14 @@ public class Nation {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.putString("name",name);
         ListTag listTag = new ListTag();
-        for (GameProfile gameProfile : members) {
-            listTag.add(NbtUtils.writeGameProfile(new CompoundTag(),gameProfile));
+        for (Object2IntMap.Entry<GameProfile> entry : members.object2IntEntrySet()) {
+            CompoundTag tag = new CompoundTag();
+            NbtUtils.writeGameProfile(tag,entry.getKey());
+            tag.putInt("rank",entry.getIntValue());
+            listTag.add(tag);
         }
         compoundTag.put("members",listTag);
+
         compoundTag.putInt("color",color);
         compoundTag.put("owner",NbtUtils.writeGameProfile(new CompoundTag(),owner));
         ListTag claimedTag = new ListTag();
@@ -151,7 +189,7 @@ public class Nation {
     }
 
     public Set<GameProfile> getMembers() {
-        return members;
+        return members.keySet();
     }
 
     public static Nation loadStatic(CompoundTag tag) {
@@ -160,8 +198,10 @@ public class Nation {
         ListTag listTag = tag.getList("members", Tag.TAG_COMPOUND);
         for (Tag tag1 : listTag) {
             CompoundTag stringTag = (CompoundTag) tag1;
-            nation.members.add(NbtUtils.readGameProfile(stringTag));
+            int rank = stringTag.getInt("rank");
+            nation.members.put(NbtUtils.readGameProfile(stringTag),rank);
         }
+
         nation.color = tag.getInt("color");
         nation.owner = NbtUtils.readGameProfile(tag.getCompound("owner"));
         ListTag claimedTag = tag.getList("claimed",Tag.TAG_COMPOUND);
