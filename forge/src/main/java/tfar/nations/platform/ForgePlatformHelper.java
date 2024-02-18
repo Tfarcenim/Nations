@@ -34,7 +34,7 @@ public class ForgePlatformHelper implements IPlatformHelper {
     }
 
     @Override
-    public void setNation(ServerPlayer player, Nation nation) {
+    public void setNation(ServerPlayer player, @Nullable Nation nation) {
         CompoundTag tag = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
         if (nation != null) {
             tag.putString("nation", nation.getName());

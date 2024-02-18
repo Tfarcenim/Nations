@@ -9,6 +9,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.storage.PlayerDataStorage;
+import org.jetbrains.annotations.Nullable;
 import tfar.nations.TeamHandler;
 import tfar.nations.mixin.MinecraftServerAccessor;
 import tfar.nations.platform.Services;
@@ -45,12 +46,12 @@ public class Nation {
         return enemies;
     }
 
-    public boolean isAlly(Nation other) {
-        return allies.contains(other.name);
+    public boolean isAlly(@Nullable Nation other) {
+        return other != null && allies.contains(other.name);
     }
 
-    public boolean isEnemy(Nation other) {
-        return enemies.contains(other.name);
+    public boolean isEnemy(@Nullable Nation other) {
+        return other != null && enemies.contains(other.name);
     }
 
     public List<GameProfile> getPromotable(ServerPlayer promoter) {
