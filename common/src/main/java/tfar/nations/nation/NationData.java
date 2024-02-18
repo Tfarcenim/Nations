@@ -12,6 +12,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 import tfar.nations.Nations;
+import tfar.nations.TeamHandler;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -64,20 +65,44 @@ public class NationData extends SavedData {
         allyInvites.put(toNation,fromNation);
     }
 
-    public void makeEnemy(Nation fromNation,Nation toNation) {
+    public void makeEnemy(MinecraftServer server,Nation fromNation,Nation toNation) {
         fromNation.getEnemies().add(toNation.getName());
         toNation.getEnemies().add(fromNation.getName());
         fromNation.getAllies().remove(toNation.getName());
         toNation.getAllies().remove(fromNation.getName());
+
+        HashSet<GameProfile> allProfiles = new HashSet<>();
+        allProfiles.addAll(toNation.getMembers());
+        allProfiles.addAll(fromNation.getMembers());
+
+        for (GameProfile gameProfile : allProfiles) {
+            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
+            if (player != null) {
+                TeamHandler.updateOthers(player);
+            }
+        }
+
         setDirty();
     }
 
-    public void makeNeutral(Nation fromNation,Nation toNation) {
+    public void makeNeutral(MinecraftServer server,Nation fromNation,Nation toNation) {
         fromNation.getEnemies().remove(toNation.getName());
         fromNation.getAllies().remove(toNation.getName());
 
         toNation.getEnemies().remove(fromNation.getName());
         toNation.getAllies().remove(fromNation.getName());
+
+        HashSet<GameProfile> allProfiles = new HashSet<>();
+        allProfiles.addAll(toNation.getMembers());
+        allProfiles.addAll(fromNation.getMembers());
+
+        for (GameProfile gameProfile : allProfiles) {
+            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
+            if (player != null) {
+                TeamHandler.updateOthers(player);
+            }
+        }
+
         setDirty();
     }
 
@@ -94,7 +119,7 @@ public class NationData extends SavedData {
         setDirty();
     }
 
-    public boolean removeNation(String name) {
+    public boolean removeNation(MinecraftServer server, String name) {
         Nation toRemove = nationsLookup.get(name);
         if (toRemove == null) return false;
 
@@ -104,6 +129,12 @@ public class NationData extends SavedData {
 
         boolean b = nations.remove(toRemove);
         nationsLookup.remove(name);
+        for (GameProfile profile : toRemove.getMembers()) {
+            ServerPlayer player = server.getPlayerList().getPlayer(profile.getId());
+            if (player != null) {
+                TeamHandler.updateOthers(player);
+            }
+        }
         setDirty();
         return b;
     }
@@ -152,9 +183,23 @@ public class NationData extends SavedData {
         return pCompoundTag;
     }
 
-    public void createAllianceBetween(Nation nation1,Nation nation2) {
-        nation1.getAllies().add(nation2.getName());
-        nation2.getAllies().add(nation1.getName());
+    public void createAllianceBetween(MinecraftServer server,Nation fromNation,Nation toNation) {
+        fromNation.getAllies().add(toNation.getName());
+        toNation.getAllies().add(fromNation.getName());
+
+
+        HashSet<GameProfile> allProfiles = new HashSet<>();
+        allProfiles.addAll(toNation.getMembers());
+        allProfiles.addAll(fromNation.getMembers());
+
+        for (GameProfile gameProfile : allProfiles) {
+            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
+            if (player != null) {
+                TeamHandler.updateOthers(player);
+            }
+        }
+
+
         setDirty();
     }
 

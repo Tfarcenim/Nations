@@ -65,6 +65,11 @@ public class Nations {
         //    }
     }
 
+    public static void login(ServerPlayer player) {
+        TeamHandler.updateSelf(player);
+        TeamHandler.updateOthers(player);
+    }
+
     public static final Item YES = Items.GREEN_STAINED_GLASS_PANE;
     public static final Item NO = Items.RED_STAINED_GLASS_PANE;
     public static final Item BLANK = Items.LIGHT_GRAY_STAINED_GLASS_PANE;
@@ -98,7 +103,7 @@ public class Nations {
     private static int removeNation(CommandContext<CommandSourceStack> commandContext) {
         NationData nationData = getInstance(commandContext);
         String string = StringArgumentType.getString(commandContext, "name");
-        if (nationData.removeNation(string)) {
+        if (nationData.removeNation(commandContext.getSource().getServer(),string)) {
             commandContext.getSource().sendSuccess(Component.literal("Removed " + string + " Nation"), true);
             return 1;
         }
@@ -191,40 +196,16 @@ public class Nations {
         SimpleGui teamOfficerMenu = new SimpleGui(MenuType.HOPPER, player, false);
         teamOfficerMenu.setTitle(Component.literal("Nation Officer Menu"));
         teamOfficerMenu.setSlot(0, ServerButtons.managePlayersButton(player, nationData, existingNation));
-        teamOfficerMenu.setSlot(2, ServerButtons.topNationsButton(player, nationData));
-
+        teamOfficerMenu.setSlot(1, ServerButtons.topNationsButton(player, nationData));
+        teamOfficerMenu.setSlot(2,ServerButtons.leaveTeamButton(player,nationData,existingNation));
         teamOfficerMenu.open();
     }
 
     private static void openTeamMemberMenu(NationData nationData, Nation existingNation, ServerPlayer player) {
         SimpleGui teamMemberMenu = new SimpleGui(MenuType.HOPPER, player, false);
         teamMemberMenu.setTitle(Component.literal("Nation Member Menu"));
-
         teamMemberMenu.setSlot(0, ServerButtons.topNationsButton(player, nationData));
-        teamMemberMenu.setSlot(1, new GuiElementBuilder()
-                .setItem(Items.BARRIER)
-                .setName(Component.literal("Leave Nation"))
-                .setCallback((index, type, action) -> {
-                    SimpleGui confirmGui = new SimpleGui(MenuType.HOPPER, player, false);
-                    confirmGui.setTitle(Component.literal("Leave Nation?"));
-                    confirmGui.setSlot(0, new GuiElementBuilder()
-                            .setItem(YES)
-                            .setName(Component.literal("Yes"))
-                            .setCallback((index1, clickType1, actionType1) -> {
-                                ServerPlayer serverPlayer = confirmGui.getPlayer();
-                                nationData.leaveNation(List.of(serverPlayer));
-                                serverPlayer.sendSystemMessage(Component.literal("Left Nation " + existingNation.getName()));
-                                confirmGui.close();
-                            })
-                    );
-                    confirmGui.setSlot(4, new GuiElementBuilder()
-                            .setItem(NO)
-                            .setName(Component.literal("No"))
-                            .setCallback((index1, clickType1, actionType1) -> confirmGui.close())
-                    );
-                    confirmGui.open();
-                })
-        );
+        teamMemberMenu.setSlot(1,ServerButtons.leaveTeamButton(player,nationData,existingNation));
         teamMemberMenu.open();
     }
 
@@ -242,7 +223,7 @@ public class Nations {
                             .setName(Component.literal("Yes"))
                             .setCallback((index1, clickType1, actionType1) -> {
                                 ServerPlayer serverPlayer = confirmGui.getPlayer();
-                                nationData.removeNation(existingNation.getName());
+                                nationData.removeNation(player.server, existingNation.getName());
                                 serverPlayer.sendSystemMessage(Component.literal("Disbanded Nation " + existingNation.getName()));
                                 confirmGui.close();
                             })
@@ -348,7 +329,7 @@ public class Nations {
                                 .setItem(YES)
                                 .setName(Component.literal("Yes"))
                                 .setCallback((index1, clickType, actionType) -> {
-                                    nationData.createAllianceBetween(allianceInvite, existingNation);
+                                    nationData.createAllianceBetween(player.server,allianceInvite, existingNation);
                                     nationData.removeAllyInvite(allianceInvite, existingNation);
                                     player.sendSystemMessage(Component.literal("You are now allied with " + allianceInvite.getName() + " nation"), false);
                                     inviteGui.close();
@@ -405,7 +386,7 @@ public class Nations {
                                                 .setSkullOwner(nation.getOwner(), player.server)
                                                 .setName(Component.literal(nation.getOwner().getName()))
                                                 .setCallback((index2, type2, action2, gui2) -> {
-                                                    nationData.makeEnemy(existingNation, nation);
+                                                    nationData.makeEnemy(player.server,existingNation, nation);
                                                     gui2.close();
                                                 })
                                         );
@@ -430,7 +411,7 @@ public class Nations {
                                                 .setSkullOwner(nation.getOwner(), player.server)
                                                 .setName(Component.literal(nation.getOwner().getName() + " - " + (isFriendly ? "Allied" : "Enemy")))
                                                 .setCallback((index2, type2, action2, gui2) -> {
-                                                    nationData.makeNeutral(existingNation, nation);
+                                                    nationData.makeNeutral(player.server,existingNation, nation);
                                                     gui2.close();
                                                 })
                                         );

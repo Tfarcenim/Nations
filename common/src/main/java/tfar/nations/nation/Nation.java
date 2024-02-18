@@ -9,6 +9,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.storage.PlayerDataStorage;
+import tfar.nations.TeamHandler;
 import tfar.nations.mixin.MinecraftServerAccessor;
 import tfar.nations.platform.Services;
 
@@ -77,6 +78,8 @@ public class Nation {
             GameProfile gameProfile = player.getGameProfile();
             members.put(gameProfile,0);
             Services.PLATFORM.setNation(player,this);
+            TeamHandler.updateOthers(player);
+            TeamHandler.updateSelf(player);
         }
     }
 
@@ -120,8 +123,10 @@ public class Nation {
     public void removePlayers(Collection<ServerPlayer> players) {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
-            members.remove(gameProfile);
+            members.removeInt(gameProfile);
             Services.PLATFORM.setNation(player,null);
+            TeamHandler.updateOthers(player);
+            TeamHandler.removeAllTeams(player);
         }
     }
 
@@ -131,6 +136,7 @@ public class Nation {
             if (player != null) {
                 player.sendSystemMessage(Component.literal("You have been exiled from "+name));
                  Services.PLATFORM.setNation(player,null);
+                TeamHandler.removeAllTeams(player);
             } else {
                 PlayerDataStorage playerDataStorage = ((MinecraftServerAccessor)server).getPlayerDataStorage();
                 ServerPlayer fakePlayer = Services.PLATFORM.getFakePlayer(server.overworld(),gameProfile);

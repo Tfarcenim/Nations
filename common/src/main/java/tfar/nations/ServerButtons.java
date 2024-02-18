@@ -13,6 +13,9 @@ import tfar.nations.sgui.api.gui.SimpleGui;
 import java.util.Comparator;
 import java.util.List;
 
+import static tfar.nations.Nations.NO;
+import static tfar.nations.Nations.YES;
+
 public class ServerButtons {
 
     public static GuiElementBuilder topNationsButton(ServerPlayer player, NationData nationData) {
@@ -202,6 +205,32 @@ public class ServerButtons {
                     }
 
                     demoteGui.open();
+                });
+    }
+
+    public static GuiElementBuilder leaveTeamButton(ServerPlayer player, NationData nationData, Nation existingNation) {
+        return new GuiElementBuilder()
+                .setItem(Items.BARRIER)
+                .setName(Component.literal("Leave Nation"))
+                .setCallback((index, type, action) -> {
+                    SimpleGui confirmGui = new SimpleGui(MenuType.HOPPER, player, false);
+                    confirmGui.setTitle(Component.literal("Leave Nation?"));
+                    confirmGui.setSlot(0, new GuiElementBuilder()
+                            .setItem(YES)
+                            .setName(Component.literal("Yes"))
+                            .setCallback((index1, clickType1, actionType1) -> {
+                                ServerPlayer serverPlayer = confirmGui.getPlayer();
+                                nationData.leaveNation(List.of(serverPlayer));
+                                serverPlayer.sendSystemMessage(Component.literal("Left Nation " + existingNation.getName()));
+                                confirmGui.close();
+                            })
+                    );
+                    confirmGui.setSlot(4, new GuiElementBuilder()
+                            .setItem(NO)
+                            .setName(Component.literal("No"))
+                            .setCallback((index1, clickType1, actionType1) -> confirmGui.close())
+                    );
+                    confirmGui.open();
                 });
     }
 
