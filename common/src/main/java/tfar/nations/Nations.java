@@ -103,7 +103,7 @@ public class Nations {
     private static int removeNation(CommandContext<CommandSourceStack> commandContext) {
         NationData nationData = getInstance(commandContext);
         String string = StringArgumentType.getString(commandContext, "name");
-        if (nationData.removeNation(commandContext.getSource().getServer(),string)) {
+        if (nationData.removeNation(commandContext.getSource().getServer(), string)) {
             commandContext.getSource().sendSuccess(Component.literal("Removed " + string + " Nation"), true);
             return 1;
         }
@@ -197,7 +197,8 @@ public class Nations {
         teamOfficerMenu.setTitle(Component.literal("Nation Officer Menu"));
         teamOfficerMenu.setSlot(0, ServerButtons.managePlayersButton(player, nationData, existingNation));
         teamOfficerMenu.setSlot(1, ServerButtons.topNationsButton(player, nationData));
-        teamOfficerMenu.setSlot(2,ServerButtons.leaveTeamButton(player,nationData,existingNation));
+        teamOfficerMenu.setSlot(2, ServerButtons.onlinePlayersButton(player, nationData));
+        teamOfficerMenu.setSlot(4, ServerButtons.leaveTeamButton(player, nationData, existingNation));
         teamOfficerMenu.open();
     }
 
@@ -205,7 +206,8 @@ public class Nations {
         SimpleGui teamMemberMenu = new SimpleGui(MenuType.HOPPER, player, false);
         teamMemberMenu.setTitle(Component.literal("Nation Member Menu"));
         teamMemberMenu.setSlot(0, ServerButtons.topNationsButton(player, nationData));
-        teamMemberMenu.setSlot(1,ServerButtons.leaveTeamButton(player,nationData,existingNation));
+        teamMemberMenu.setSlot(1, ServerButtons.onlinePlayersButton(player, nationData));
+        teamMemberMenu.setSlot(2, ServerButtons.leaveTeamButton(player, nationData, existingNation));
         teamMemberMenu.open();
     }
 
@@ -329,7 +331,7 @@ public class Nations {
                                 .setItem(YES)
                                 .setName(Component.literal("Yes"))
                                 .setCallback((index1, clickType, actionType) -> {
-                                    nationData.createAllianceBetween(player.server,allianceInvite, existingNation);
+                                    nationData.createAllianceBetween(player.server, allianceInvite, existingNation);
                                     nationData.removeAllyInvite(allianceInvite, existingNation);
                                     player.sendSystemMessage(Component.literal("You are now allied with " + allianceInvite.getName() + " nation"), false);
                                     inviteGui.close();
@@ -386,7 +388,7 @@ public class Nations {
                                                 .setSkullOwner(nation.getOwner(), player.server)
                                                 .setName(Component.literal(nation.getOwner().getName()))
                                                 .setCallback((index2, type2, action2, gui2) -> {
-                                                    nationData.makeEnemy(player.server,existingNation, nation);
+                                                    nationData.makeEnemy(player.server, existingNation, nation);
                                                     gui2.close();
                                                 })
                                         );
@@ -411,7 +413,7 @@ public class Nations {
                                                 .setSkullOwner(nation.getOwner(), player.server)
                                                 .setName(Component.literal(nation.getOwner().getName() + " - " + (isFriendly ? "Allied" : "Enemy")))
                                                 .setCallback((index2, type2, action2, gui2) -> {
-                                                    nationData.makeNeutral(player.server,existingNation, nation);
+                                                    nationData.makeNeutral(player.server, existingNation, nation);
                                                     gui2.close();
                                                 })
                                         );
@@ -448,6 +450,7 @@ public class Nations {
         );
 
         teamLeaderMenu.setSlot(4, ServerButtons.topNationsButton(player, nationData));
+        teamLeaderMenu.setSlot(5, ServerButtons.onlinePlayersButton(player, nationData));
 
         teamLeaderMenu.open();
     }
