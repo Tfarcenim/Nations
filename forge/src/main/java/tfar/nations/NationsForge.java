@@ -1,12 +1,14 @@
 package tfar.nations;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
@@ -33,8 +35,18 @@ public class NationsForge {
         MinecraftForge.EVENT_BUS.addListener(this::playerLoggedIn);
         MinecraftForge.EVENT_BUS.addListener(this::blockBreak);
         MinecraftForge.EVENT_BUS.addListener(this::blockInteract);
+        MinecraftForge.EVENT_BUS.addListener(this::levelTick);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(Datagen::gather);
         Nations.init();
+    }
+
+    private void levelTick(TickEvent.LevelTickEvent event) {
+        if (event.level instanceof ServerLevel serverLevel) {
+            NationData nationData = NationData.getNationInstance(serverLevel);
+            if (nationData != null) {
+                nationData.tick(serverLevel);
+            }
+        }
     }
 
     private void blockInteract(PlayerInteractEvent.RightClickBlock event) {
@@ -43,7 +55,7 @@ public class NationsForge {
         BlockState state = player.level.getBlockState(pos);
         ChunkPos chunkPos = new ChunkPos(pos);
         if (player instanceof ServerPlayer serverPlayer) {
-            NationData nationData = NationData.getDefaultNationsInstance(serverPlayer.server);
+            NationData nationData = NationData.getOrCreateDefaultNationsInstance(serverPlayer.server);
             Nation nationChunk = nationData.getNationAtChunk(chunkPos);
             if (nationChunk == null) return;
             if (state.is(ModTags.CLAIM_RESISTANT)) {
@@ -63,7 +75,7 @@ public class NationsForge {
         BlockState state = event.getState();
         ChunkPos chunkPos = new ChunkPos(pos);
         if (player instanceof ServerPlayer serverPlayer) {
-            NationData nationData = NationData.getDefaultNationsInstance(serverPlayer.server);
+            NationData nationData = NationData.getOrCreateDefaultNationsInstance(serverPlayer.server);
             Nation nationChunk = nationData.getNationAtChunk(chunkPos);
             if (nationChunk == null) return;
             if (state.is(ModTags.CLAIM_RESISTANT)) {

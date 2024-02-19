@@ -12,6 +12,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 import tfar.nations.Nations;
+import tfar.nations.Siege;
 import tfar.nations.TeamHandler;
 
 import java.util.*;
@@ -25,18 +26,28 @@ public class NationData extends SavedData {
     private final Map<UUID,Nation> invites = new HashMap<>();
     private final Map<Nation,Nation> allyInvites = new HashMap<>();
 
+    @Nullable
+    private Siege activeSiege;
+
+    @Nullable
     public static NationData getNationInstance(ServerLevel serverLevel) {
         return serverLevel.getDataStorage()
-                .computeIfAbsent(NationData::loadStatic, NationData::new, Nations.MOD_ID);
+                .get(compoundTag -> loadStatic(compoundTag, serverLevel),Nations.MOD_ID);
     }
 
-    public static NationData getDefaultNationsInstance(MinecraftServer server) {
-        return getNationInstance(server.getLevel(Level.OVERWORLD));
+
+    public static NationData getOrCreateNationInstance(ServerLevel serverLevel) {
+        return serverLevel.getDataStorage()
+                .computeIfAbsent(compoundTag -> loadStatic(compoundTag,serverLevel), NationData::new, Nations.MOD_ID);
     }
 
-    public static NationData loadStatic(CompoundTag compoundTag) {
+    public static NationData getOrCreateDefaultNationsInstance(MinecraftServer server) {
+        return getOrCreateNationInstance(server.getLevel(Level.OVERWORLD));
+    }
+
+    public static NationData loadStatic(CompoundTag compoundTag,ServerLevel level) {
         NationData id = new NationData();
-        id.load(compoundTag);
+        id.load(compoundTag,level);
         return id;
     }
 
@@ -135,6 +146,10 @@ public class NationData extends SavedData {
             nation.getEnemies().remove(toRemove.getName());
         }
 
+        if (activeSiege != null && activeSiege.isInvolved(toRemove)) {
+            endSiege();
+        }
+
         for (GameProfile profile : toRemove.getMembers()) {
             ServerPlayer player = server.getPlayerList().getPlayer(profile.getId());
             if (player != null) {
@@ -146,12 +161,33 @@ public class NationData extends SavedData {
         return b;
     }
 
+    public void endSiege() {
+        activeSiege = null;
+        setDirty();
+    }
+
+    public void startSiege(Nation attacking, Nation defending,ServerLevel level,ChunkPos pos) {
+        if (activeSiege == null) {
+            activeSiege = new Siege(attacking,defending,level , pos);
+        }
+    }
+    public void tick(ServerLevel level) {
+        if (activeSiege != null) {
+            activeSiege.tick();
+            setDirty();
+        }
+    }
+
     public List<Nation> getNations() {
         return nations;
     }
 
     public Nation getNationByName(String name) {
         return nationsLookup.get(name);
+    }
+
+    public @Nullable Siege getActiveSiege() {
+        return activeSiege;
     }
 
     public void addClaim(Nation nation,ChunkPos chunkPos) {
@@ -166,7 +202,7 @@ public class NationData extends SavedData {
         setDirty();
     }
 
-    public void load(CompoundTag tag) {
+    public void load(CompoundTag tag,ServerLevel level) {
         nations.clear();
         nationsLookup.clear();
         chunkLookup.clear();
@@ -178,6 +214,9 @@ public class NationData extends SavedData {
             nations.add(nation);
             nationsLookup.put(nation.getName(),nation);
         }
+        if (tag.contains("active_siege")) {
+            activeSiege = Siege.load(tag.getCompound("active_siege"), level,this);
+        }
     }
 
     @Override
@@ -187,6 +226,10 @@ public class NationData extends SavedData {
             listTag.add(nation.save());
         }
         pCompoundTag.put(Nations.MOD_ID, listTag);
+        if (activeSiege != null) {
+            pCompoundTag.put("active_siege",activeSiege.save());
+        }
+
         return pCompoundTag;
     }
 

@@ -50,7 +50,7 @@ public class ForgePlatformHelper implements IPlatformHelper {
         CompoundTag tag = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
         if (!tag.contains("nation")) return null;
         String s = tag.getString("nation");
-        Nation nation = NationData.getDefaultNationsInstance(player.server).getNationByName(s);
+        Nation nation = NationData.getOrCreateDefaultNationsInstance(player.server).getNationByName(s);
         return nation;
     }
 

@@ -20,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tfar.nations.nation.Nation;
@@ -66,6 +67,15 @@ public class Nations {
     }
 
     public static void login(ServerPlayer player) {
+
+        NationData nationData = NationData.getOrCreateDefaultNationsInstance(player.server);
+        Siege siege = nationData.getActiveSiege();
+        if (siege != null && siege.isAttacking(player)) {
+            if (TeamHandler.isPlayerNearClaim(player,siege.getClaimPos())) {
+                nationData.endSiege();
+            }
+        }
+
         TeamHandler.updateSelf(player);
         TeamHandler.updateOthers(player);
     }
@@ -91,7 +101,7 @@ public class Nations {
     }
 
     private static int createNation(CommandContext<CommandSourceStack> commandContext) {
-        NationData nationData = getInstance(commandContext);
+        NationData nationData = getOverworldInstance(commandContext);
         String string = StringArgumentType.getString(commandContext, "name");
         if (nationData.createNation(string) != null) {
             return 1;
@@ -101,7 +111,7 @@ public class Nations {
     }
 
     private static int removeNation(CommandContext<CommandSourceStack> commandContext) {
-        NationData nationData = getInstance(commandContext);
+        NationData nationData = getOverworldInstance(commandContext);
         String string = StringArgumentType.getString(commandContext, "name");
         if (nationData.removeNation(commandContext.getSource().getServer(), string)) {
             commandContext.getSource().sendSuccess(Component.literal("Removed " + string + " Nation"), true);
@@ -111,21 +121,27 @@ public class Nations {
         return 0;
     }
 
-    private static NationData getInstance(CommandContext<CommandSourceStack> commandContext) {
+    private static NationData getOverworldInstance(CommandContext<CommandSourceStack> commandContext) {
         MinecraftServer server = commandContext.getSource().getServer();
-        return NationData.getDefaultNationsInstance(server);
+        return NationData.getOrCreateDefaultNationsInstance(server);
     }
 
     private static final SuggestionProvider<CommandSourceStack> NATIONS = (commandContext, suggestionsBuilder) -> {
-        List<String> collection = Nations.getInstance(commandContext).getNations().stream().map(Nation::getName).toList();
+        List<String> collection = Nations.getOverworldInstance(commandContext).getNations().stream().map(Nation::getName).toList();
         return SharedSuggestionProvider.suggest(collection, suggestionsBuilder);
     };
 
     private static int openGui(CommandContext<CommandSourceStack> objectCommandContext) {
         try {
             ServerPlayer player = objectCommandContext.getSource().getPlayerOrException();
+
+            if (player.getLevel().dimension() != Level.OVERWORLD) {
+                player.sendSystemMessage(Component.literal("Can't use Nations outside of overworld"));
+                return 0;
+            }
+
             Nation existingNation = Services.PLATFORM.getNation(player);
-            NationData nationData = NationData.getDefaultNationsInstance(player.server);
+            NationData nationData = NationData.getOrCreateDefaultNationsInstance(player.server);
 
             Nation invitedTo = nationData.getInviteForPlayer(player);
 
@@ -459,23 +475,23 @@ public class Nations {
                     Set<String> enemies = existingNation.getEnemies();
                     int i = 0;
                     for (String s : enemies) {
-                        Nation nation = nationData.getNationByName(s);
+                        Nation enemyNation = nationData.getNationByName(s);
 
-                        if (nation!= null) {
+                        if (enemyNation!= null) {
 
-                            List<ServerPlayer> online = nation.getOnlineMembers(player.server);
-                            int total = nation.getMembers().size();
+                            List<ServerPlayer> online = enemyNation.getOnlineMembers(player.server);
+                            int total = enemyNation.getMembers().size();
 
                             double percentage = online.size() / (double)total;
 
-                            String name = nation.getName() + " | " + online.size() +"/" + total + " online";
+                            String name = enemyNation.getName() + " | " + online.size() +"/" + total + " online";
 
                             raidGui.setSlot(i++,new GuiElementBuilder(Items.PLAYER_HEAD)
-                                    .setSkullOwner(nation.getOwner(),player.server)
+                                    .setSkullOwner(enemyNation.getOwner(),player.server)
                                     .setName(Component.literal(name))
                                     .setCallback((index1, type1, action1, gui1) -> {
 
-                                        if (percentage > .5) {
+                                        if (percentage > -.5) {
                                             SimpleGui siege2Gui = new SimpleGui(MenuType.GENERIC_9x6, player, false);
                                             siege2Gui.setTitle(Component.literal("Select Enemy Claim"));
                                             ChunkPos chunkPos = new ChunkPos(player.blockPosition());
@@ -502,7 +518,18 @@ public class Nations {
                                                             .setItem(icon)
                                                             .setName(Component.literal(nationName + " (" + offset.x + "," + offset.z + ")"))
                                                             .setCallback((index2, type2, action2, gui2) -> {
-
+                                                                if (claimed != enemyNation) {
+                                                                    player.sendSystemMessage(Component.literal("Incorrect nation claim "+nationName
+                                                                            +", expected "+ enemyNation.getName()));
+                                                                } else {
+                                                                    if (!TeamHandler.membersNearby(player.server,offset,existingNation)) {
+                                                                        nationData.startSiege(existingNation, enemyNation, player.getLevel(), offset);
+                                                                        gui2.close();
+                                                                    } else {
+                                                                        player.sendSystemMessage(Component.literal(
+                                                                                "Can't start siege with nation members within 16 blocks of enemy claim"));
+                                                                    }
+                                                                }
                                                             });
 
                                                     if (glow) {
