@@ -451,6 +451,79 @@ public class Nations {
 
         teamLeaderMenu.setSlot(4, ServerButtons.topNationsButton(player, nationData));
         teamLeaderMenu.setSlot(5, ServerButtons.onlinePlayersButton(player, nationData));
+        teamLeaderMenu.setSlot(6,new GuiElementBuilder(Items.RED_BANNER)
+                .setName(Component.literal("Declare Siege"))
+                .setCallback((index, type, action, gui) -> {
+                    SimpleGui raidGui = new SimpleGui(MenuType.GENERIC_9x3,player,false);
+                    raidGui.setTitle(Component.literal("Select Enemy Nation"));
+                    Set<String> enemies = existingNation.getEnemies();
+                    int i = 0;
+                    for (String s : enemies) {
+                        Nation nation = nationData.getNationByName(s);
+
+                        if (nation!= null) {
+
+                            List<ServerPlayer> online = nation.getOnlineMembers(player.server);
+                            int total = nation.getMembers().size();
+
+                            double percentage = online.size() / (double)total;
+
+                            String name = nation.getName() + " | " + online.size() +"/" + total + " online";
+
+                            raidGui.setSlot(i++,new GuiElementBuilder(Items.PLAYER_HEAD)
+                                    .setSkullOwner(nation.getOwner(),player.server)
+                                    .setName(Component.literal(name))
+                                    .setCallback((index1, type1, action1, gui1) -> {
+
+                                        if (percentage > .5) {
+                                            SimpleGui siege2Gui = new SimpleGui(MenuType.GENERIC_9x6, player, false);
+                                            siege2Gui.setTitle(Component.literal("Select Enemy Claim"));
+                                            ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+                                            int i1 = 0;
+                                            for (int z = -2; z < 4; z++) {
+                                                for (int x = -4; x < 5; x++) {
+                                                    ChunkPos offset = new ChunkPos(chunkPos.x + x, chunkPos.z + z);
+
+                                                    Nation claimed = nationData.getNationAtChunk(offset);
+                                                    Item icon = Items.LIGHT_GRAY_STAINED_GLASS_PANE;
+
+                                                    if (claimed != null) {
+                                                        if (claimed == existingNation)
+                                                            icon = Items.GREEN_STAINED_GLASS_PANE;
+                                                        else {
+                                                            icon = Items.RED_STAINED_GLASS_PANE;
+                                                        }
+                                                    }
+
+                                                    String nationName = claimed != null ? claimed.getName() : "Wilderness";
+                                                    boolean glow = offset.equals(chunkPos);
+
+                                                    GuiElementBuilder elementBuilder = new GuiElementBuilder()
+                                                            .setItem(icon)
+                                                            .setName(Component.literal(nationName + " (" + offset.x + "," + offset.z + ")"))
+                                                            .setCallback((index2, type2, action2, gui2) -> {
+
+                                                            });
+
+                                                    if (glow) {
+                                                        elementBuilder.glow();
+                                                    }
+
+                                                    siege2Gui.setSlot(i1, elementBuilder);
+                                                    i1++;
+                                                }
+                                            }
+                                            siege2Gui.open();
+                                        } else {
+                                            player.sendSystemMessage(Component.literal("Not enough members online to raid"));
+                                        }
+                                    })
+                            );
+                            raidGui.open();
+                        }
+                    }
+                })
+        );
 
         teamLeaderMenu.open();
     }

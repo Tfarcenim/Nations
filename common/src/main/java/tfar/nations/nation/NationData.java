@@ -129,12 +129,19 @@ public class NationData extends SavedData {
 
         boolean b = nations.remove(toRemove);
         nationsLookup.remove(name);
+
+        for (Nation nation : nations) {
+            nation.getAllies().remove(toRemove.getName());
+            nation.getEnemies().remove(toRemove.getName());
+        }
+
         for (GameProfile profile : toRemove.getMembers()) {
             ServerPlayer player = server.getPlayerList().getPlayer(profile.getId());
             if (player != null) {
                 TeamHandler.updateOthers(player);
             }
         }
+
         setDirty();
         return b;
     }

@@ -15,13 +15,14 @@ import tfar.nations.mixin.MinecraftServerAccessor;
 import tfar.nations.platform.Services;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Nation {
 
     private String name;
     private final Object2IntMap<GameProfile> members = new Object2IntOpenHashMap<>();
     private final Set<ChunkPos> claimed = new HashSet<>();
-    private int color =0xffffff;
+    private int color = 0xffffff;
     private GameProfile owner;
     private final Set<String> allies = new HashSet<>();
     private final Set<String> enemies = new HashSet<>();
@@ -44,6 +45,10 @@ public class Nation {
 
     public Set<String> getEnemies() {
         return enemies;
+    }
+
+    public List<ServerPlayer> getOnlineMembers(MinecraftServer server) {
+        return members.keySet().stream().map(gameProfile -> server.getPlayerList().getPlayer(gameProfile.getId())).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     public boolean isAlly(@Nullable Nation other) {
@@ -77,8 +82,8 @@ public class Nation {
     public void addPlayers(Collection<ServerPlayer> players) {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
-            members.put(gameProfile,0);
-            Services.PLATFORM.setNation(player,this);
+            members.put(gameProfile, 0);
+            Services.PLATFORM.setNation(player, this);
             TeamHandler.updateOthers(player);
             TeamHandler.updateSelf(player);
         }
@@ -87,7 +92,7 @@ public class Nation {
     public void setOwner(ServerPlayer newOwner) {
         this.owner = newOwner.getGameProfile();
         addPlayers(List.of(newOwner));
-        members.put(owner,2);
+        members.put(owner, 2);
     }
 
     public boolean isOfficer(ServerPlayer player) {
@@ -97,6 +102,7 @@ public class Nation {
     public int getRank(GameProfile profile) {
         return members.getInt(profile);
     }
+
     public void demote(GameProfile profile) {
         if (members.containsKey(profile)) {
             members.put(profile, members.getInt(profile) - 1);
@@ -105,7 +111,7 @@ public class Nation {
 
     public void promote(GameProfile profile) {
         if (members.containsKey(profile)) {
-            members.put(profile,members.getInt(profile) + 1);
+            members.put(profile, members.getInt(profile) + 1);
         }
     }
 
@@ -125,7 +131,7 @@ public class Nation {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
             members.removeInt(gameProfile);
-            Services.PLATFORM.setNation(player,null);
+            Services.PLATFORM.setNation(player, null);
             TeamHandler.updateOthers(player);
             TeamHandler.removeAllTeams(player);
         }
@@ -135,15 +141,15 @@ public class Nation {
         for (GameProfile gameProfile : gameProfiles) {
             ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
             if (player != null) {
-                player.sendSystemMessage(Component.literal("You have been exiled from "+name));
-                 Services.PLATFORM.setNation(player,null);
+                player.sendSystemMessage(Component.literal("You have been exiled from " + name));
+                Services.PLATFORM.setNation(player, null);
                 TeamHandler.removeAllTeams(player);
             } else {
-                PlayerDataStorage playerDataStorage = ((MinecraftServerAccessor)server).getPlayerDataStorage();
-                ServerPlayer fakePlayer = Services.PLATFORM.getFakePlayer(server.overworld(),gameProfile);
+                PlayerDataStorage playerDataStorage = ((MinecraftServerAccessor) server).getPlayerDataStorage();
+                ServerPlayer fakePlayer = Services.PLATFORM.getFakePlayer(server.overworld(), gameProfile);
                 CompoundTag nbt = playerDataStorage.load(fakePlayer);
                 if (nbt != null) {
-                    Services.PLATFORM.setNation(fakePlayer,null);
+                    Services.PLATFORM.setNation(fakePlayer, null);
                     playerDataStorage.save(fakePlayer);
                 }
             }
@@ -157,40 +163,40 @@ public class Nation {
 
     public CompoundTag save() {
         CompoundTag compoundTag = new CompoundTag();
-        compoundTag.putString("name",name);
+        compoundTag.putString("name", name);
         ListTag listTag = new ListTag();
         for (Object2IntMap.Entry<GameProfile> entry : members.object2IntEntrySet()) {
             CompoundTag tag = new CompoundTag();
-            NbtUtils.writeGameProfile(tag,entry.getKey());
-            tag.putInt("rank",entry.getIntValue());
+            NbtUtils.writeGameProfile(tag, entry.getKey());
+            tag.putInt("rank", entry.getIntValue());
             listTag.add(tag);
         }
-        compoundTag.put("members",listTag);
+        compoundTag.put("members", listTag);
 
-        compoundTag.putInt("color",color);
-        compoundTag.put("owner",NbtUtils.writeGameProfile(new CompoundTag(),owner));
+        compoundTag.putInt("color", color);
+        compoundTag.put("owner", NbtUtils.writeGameProfile(new CompoundTag(), owner));
         ListTag claimedTag = new ListTag();
         for (ChunkPos chunkPos : claimed) {
             CompoundTag compound = new CompoundTag();
-            compound.putInt("x",chunkPos.x);
-            compound.putInt("z",chunkPos.z);
+            compound.putInt("x", chunkPos.x);
+            compound.putInt("z", chunkPos.z);
             claimedTag.add(compound);
         }
-        compoundTag.put("claimed",claimedTag);
+        compoundTag.put("claimed", claimedTag);
 
         ListTag alliedTag = new ListTag();
         for (String string : allies) {
             StringTag stringTag = StringTag.valueOf(string);
             alliedTag.add(stringTag);
         }
-        compoundTag.put("allies",alliedTag);
+        compoundTag.put("allies", alliedTag);
 
         ListTag enemyTag = new ListTag();
         for (String string : enemies) {
             StringTag stringTag = StringTag.valueOf(string);
             enemyTag.add(stringTag);
         }
-        compoundTag.put("enemies",enemyTag);
+        compoundTag.put("enemies", enemyTag);
 
         return compoundTag;
     }
@@ -206,22 +212,22 @@ public class Nation {
         for (Tag tag1 : listTag) {
             CompoundTag stringTag = (CompoundTag) tag1;
             int rank = stringTag.getInt("rank");
-            nation.members.put(NbtUtils.readGameProfile(stringTag),rank);
+            nation.members.put(NbtUtils.readGameProfile(stringTag), rank);
         }
 
         nation.color = tag.getInt("color");
         nation.owner = NbtUtils.readGameProfile(tag.getCompound("owner"));
-        ListTag claimedTag = tag.getList("claimed",Tag.TAG_COMPOUND);
+        ListTag claimedTag = tag.getList("claimed", Tag.TAG_COMPOUND);
         for (Tag tag1 : claimedTag) {
             CompoundTag compound = (CompoundTag) tag1;
-            nation.claimed.add(new ChunkPos(compound.getInt("x"),compound.getInt("z")));
+            nation.claimed.add(new ChunkPos(compound.getInt("x"), compound.getInt("z")));
         }
-        ListTag alliedTag = tag.getList("allies",Tag.TAG_STRING);
+        ListTag alliedTag = tag.getList("allies", Tag.TAG_STRING);
         for (Tag tag1 : alliedTag) {
             StringTag stringTag = (StringTag) tag1;
             nation.allies.add(stringTag.getAsString());
         }
-        ListTag enemiesTag = tag.getList("enemies",Tag.TAG_STRING);
+        ListTag enemiesTag = tag.getList("enemies", Tag.TAG_STRING);
         for (Tag tag1 : enemiesTag) {
             StringTag stringTag = (StringTag) tag1;
             nation.enemies.add(stringTag.getAsString());
