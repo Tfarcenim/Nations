@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import tfar.nations.Nations;
 import tfar.nations.sgui.api.ClickType;
 import tfar.nations.sgui.api.GuiHelpers;
 import tfar.nations.sgui.api.gui.AnvilInputGui;
@@ -310,6 +311,13 @@ public abstract class ServerGamePacketListenerImplMixin {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    @Inject(method = "handleMovePlayer",at = @At(value = "INVOKE",target = "Lnet/minecraft/server/level/ServerPlayer;getBoundingBox()Lnet/minecraft/world/phys/AABB;"),cancellable = true)
+    private void onMoveEvent(ServerboundMovePlayerPacket packet, CallbackInfo ci) {
+        if (Nations.onMovePacket((ServerGamePacketListenerImpl) (Object)this,this.player,packet)) {
+            ci.cancel();
         }
     }
 

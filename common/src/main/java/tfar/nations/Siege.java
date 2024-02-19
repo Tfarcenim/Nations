@@ -10,6 +10,8 @@ import tfar.nations.platform.Services;
 
 public class Siege {
 
+    public static final int PRE_LENGTH = 60 * 20 * 1;
+
     private Nation attacking;
     private Nation defending;
     private final ServerLevel level;
@@ -24,11 +26,18 @@ public class Siege {
     }
 
     public enum Stage {
-
+        PRE,ONGOING;
     }
 
     public ChunkPos getClaimPos() {
         return claimPos;
+    }
+
+    public Stage getStage() {
+        if (age < PRE_LENGTH) {
+            return Stage.PRE;
+        }
+        return Stage.ONGOING;
     }
 
     public boolean isInvolved(Nation nation) {

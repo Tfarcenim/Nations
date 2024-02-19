@@ -11,8 +11,10 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
@@ -96,8 +98,18 @@ public class Nations {
                 .then(Commands.literal("remove")
                         .then(Commands.argument("name", StringArgumentType.string()).suggests(NATIONS)
                                 .executes(Nations::removeNation)))
+                .then(Commands.literal("siege")
+                        .then(Commands.literal("stop")
+                                .executes(Nations::stopSiege)
+                        ))
 
         );
+    }
+
+    private static int stopSiege(CommandContext<CommandSourceStack> commandContext) {
+        NationData nationData = getOverworldInstance(commandContext);
+        nationData.endSiege();
+        return 1;
     }
 
     private static int createNation(CommandContext<CommandSourceStack> commandContext) {
@@ -672,6 +684,21 @@ public class Nations {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    public static boolean onMovePacket(ServerGamePacketListenerImpl packetHandler,ServerPlayer player, ServerboundMovePlayerPacket packet) {
+        NationData nationData = NationData.getNationInstance(player.getLevel());
+        if (nationData != null) {
+            Siege siege = nationData.getActiveSiege();
+            if (siege != null) {
+                if (siege.isAttacking(player) && TeamHandler.isPlayerNearClaim(player,siege.getClaimPos())) {
+                    player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
+                    packetHandler.teleport(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }
