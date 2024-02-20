@@ -81,7 +81,7 @@ public class NationsForge {
     }
 
     private void levelTick(TickEvent.LevelTickEvent event) {
-        if (event.level instanceof ServerLevel serverLevel) {
+        if (event.level instanceof ServerLevel serverLevel && event.phase == TickEvent.Phase.START) {
             NationData nationData = NationData.getNationInstance(serverLevel);
             if (nationData != null) {
                 nationData.tick(serverLevel);

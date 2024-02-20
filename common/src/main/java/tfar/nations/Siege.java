@@ -13,8 +13,7 @@ import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
 import tfar.nations.platform.Services;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Siege {
@@ -24,7 +23,7 @@ public class Siege {
     private Nation attacking;
     private Nation defending;
     private Set<GameProfile> surviving_attackers;
-    private Set<GameProfile> surviving_defenders;
+    private Map<GameProfile,Integer> surviving_defenders;
     private final ServerLevel level;
     private final ChunkPos claimPos;
     long time;
@@ -42,7 +41,11 @@ public class Siege {
         List<ServerPlayer> defenders = defending.getOnlineMembers(level.getServer());
 
         surviving_attackers = attackers.stream().map(Player::getGameProfile).collect(Collectors.toSet());
-        surviving_defenders = defenders.stream().map(Player::getGameProfile).collect(Collectors.toSet());
+
+        surviving_defenders = new HashMap<>();
+
+        defenders.forEach(player -> surviving_defenders.put(player.getGameProfile(), 0));
+
         serverBossEvent.setName(Component.literal("Siege: Stage 1"));
 
         for (ServerPlayer serverPlayer : attackers) {
@@ -67,7 +70,12 @@ public class Siege {
         public static Stage last() {
             return Stage.values()[Stage.values().length - 1];
         }
+    }
 
+    public int desertionTimer() {
+        //120 seconds 1,2
+        //15 seconds 3
+        return stage == Stage.THREE ? 15 * 20: 120 * 20;
     }
 
     public void attackerDefeated(ServerPlayer player) {
@@ -115,6 +123,35 @@ public class Siege {
         if (stageTime >= stage.ticks) {
             setNextStage();
         }
+        for (GameProfile profile : surviving_defenders.keySet()) {
+            ServerPlayer player = level.getServer().getPlayerList().getPlayer(profile.getId());
+            if (player != null) {
+                if (!TeamHandler.isPlayerNearClaim(player,claimPos)) {
+                    surviving_defenders.put(profile,surviving_defenders.get(profile) + 1);
+                    if (checkClaimDesertion(player)) {
+                        deserted.add(player);
+                    }
+                } else {
+                    surviving_defenders.put(profile,0);
+                }
+            }
+        }
+        deserted.forEach(this::defenderDefeated);
+        deserted.clear();
+    }
+
+    private final Set<ServerPlayer> deserted = new HashSet<>();
+    public boolean checkClaimDesertion(ServerPlayer player) {
+        int ticksAbandoned = surviving_defenders.get(player.getGameProfile());
+        int ticksLeft = desertionTimer() - ticksAbandoned;
+        if (ticksLeft < 201) {
+            if (ticksLeft <= 0) return true;
+            if (ticksLeft % 20 == 0) {
+                player.sendSystemMessage(Component.literal("Warning! Move back to claim within "+(ticksLeft / 20) +" seconds!"));
+            }
+            return false;
+        }
+        return false;
     }
 
     public void setNextStage() {
