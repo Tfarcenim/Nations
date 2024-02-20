@@ -167,10 +167,13 @@ public class TeamHandler {
     }
 
     public static boolean isPlayerInArea(ServerPlayer player,ChunkPos pos,int radius) {
-        Vec3 playerPos = player.position();
-        int centerX = pos.getMiddleBlockX();
-        int centerZ = pos.getMiddleBlockZ();
-        int check = 8 + 16 * radius;
-        return playerPos.x - centerX < check && playerPos.z - centerZ < check;
+        ChunkPos playerPos = new ChunkPos(player.blockPosition());
+        return Math.abs(playerPos.x - pos.x) <= radius && Math.abs(playerPos.z - pos.z) <= radius;
     }
+
+    public static boolean isPointInArea(Vec3 position,ChunkPos pos,int radius) {
+        int check = 8 + radius * 16;
+        return Math.abs(position.x - pos.getMiddleBlockX()) <= check && Math.abs(position.z - pos.getMiddleBlockZ()) <= check;
+    }
+
 }

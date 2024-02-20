@@ -1,14 +1,18 @@
 package tfar.nations;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityTeleportEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
@@ -36,11 +40,43 @@ public class NationsForge {
         MinecraftForge.EVENT_BUS.addListener(this::blockBreak);
         MinecraftForge.EVENT_BUS.addListener(this::blockInteract);
         MinecraftForge.EVENT_BUS.addListener(this::levelTick);
+        MinecraftForge.EVENT_BUS.addListener(this::teleportEvent);
+        MinecraftForge.EVENT_BUS.addListener(this::teleportPearlEvent);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(Datagen::gather);
         Nations.init();
     }
 
-    private void levelTick(TickEvent.LevelTickEvent event) {
+    private void teleportEvent(EntityTeleportEvent.ChorusFruit event) {
+        Entity entity = event.getEntity();
+        if (entity instanceof ServerPlayer serverPlayer) {
+            if (onTeleportForge(serverPlayer,event.getTarget())) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    private void teleportPearlEvent(EntityTeleportEvent.EnderPearl event) {
+        Entity entity = event.getEntity();
+        if (entity instanceof ServerPlayer serverPlayer) {
+            if (onTeleportForge(serverPlayer, event.getTarget())) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    private boolean onTeleportForge(ServerPlayer player, Vec3 target) {
+        NationData nationData = NationData.getOrCreateNationInstance(player.getLevel());
+        Siege siege = nationData.getActiveSiege();
+        if (siege != null) {
+            if (siege.isAttacking(player) && TeamHandler.isPointInArea(target, siege.getClaimPos(),1)) {
+                    player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
+                    return true;
+                }
+            }
+        return false;
+        }
+
+        private void levelTick(TickEvent.LevelTickEvent event) {
         if (event.level instanceof ServerLevel serverLevel) {
             NationData nationData = NationData.getNationInstance(serverLevel);
             if (nationData != null) {

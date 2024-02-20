@@ -9,6 +9,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
@@ -23,6 +24,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tfar.nations.nation.Nation;
@@ -32,10 +34,7 @@ import tfar.nations.sgui.api.ClickType;
 import tfar.nations.sgui.api.elements.*;
 import tfar.nations.sgui.api.gui.SimpleGui;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.UnaryOperator;
 
 // This class is part of the common project meaning it is shared between all supported loaders. Code written here can only
@@ -73,7 +72,7 @@ public class Nations {
         NationData nationData = NationData.getOrCreateDefaultNationsInstance(player.server);
         Siege siege = nationData.getActiveSiege();
         if (siege != null && siege.isAttacking(player)) {
-            if (TeamHandler.isPlayerNearClaim(player,siege.getClaimPos())) {
+            if (TeamHandler.isPlayerNearClaim(player, siege.getClaimPos())) {
                 nationData.endSiege();
             }
         }
@@ -479,27 +478,27 @@ public class Nations {
 
         teamLeaderMenu.setSlot(4, ServerButtons.topNationsButton(player, nationData));
         teamLeaderMenu.setSlot(5, ServerButtons.onlinePlayersButton(player, nationData));
-        teamLeaderMenu.setSlot(6,new GuiElementBuilder(Items.RED_BANNER)
+        teamLeaderMenu.setSlot(6, new GuiElementBuilder(Items.RED_BANNER)
                 .setName(Component.literal("Declare Siege"))
                 .setCallback((index, type, action, gui) -> {
-                    SimpleGui raidGui = new SimpleGui(MenuType.GENERIC_9x3,player,false);
+                    SimpleGui raidGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
                     raidGui.setTitle(Component.literal("Select Enemy Nation"));
                     Set<String> enemies = existingNation.getEnemies();
                     int i = 0;
                     for (String s : enemies) {
                         Nation enemyNation = nationData.getNationByName(s);
 
-                        if (enemyNation!= null) {
+                        if (enemyNation != null) {
 
                             List<ServerPlayer> online = enemyNation.getOnlineMembers(player.server);
                             int total = enemyNation.getMembers().size();
 
-                            double percentage = online.size() / (double)total;
+                            double percentage = online.size() / (double) total;
 
-                            String name = enemyNation.getName() + " | " + online.size() +"/" + total + " online";
+                            String name = enemyNation.getName() + " | " + online.size() + "/" + total + " online";
 
-                            raidGui.setSlot(i++,new GuiElementBuilder(Items.PLAYER_HEAD)
-                                    .setSkullOwner(enemyNation.getOwner(),player.server)
+                            raidGui.setSlot(i++, new GuiElementBuilder(Items.PLAYER_HEAD)
+                                    .setSkullOwner(enemyNation.getOwner(), player.server)
                                     .setName(Component.literal(name))
                                     .setCallback((index1, type1, action1, gui1) -> {
 
@@ -531,10 +530,10 @@ public class Nations {
                                                             .setName(Component.literal(nationName + " (" + offset.x + "," + offset.z + ")"))
                                                             .setCallback((index2, type2, action2, gui2) -> {
                                                                 if (claimed != enemyNation) {
-                                                                    player.sendSystemMessage(Component.literal("Incorrect nation claim "+nationName
-                                                                            +", expected "+ enemyNation.getName()));
+                                                                    player.sendSystemMessage(Component.literal("Incorrect nation claim " + nationName
+                                                                            + ", expected " + enemyNation.getName()));
                                                                 } else {
-                                                                    if (!TeamHandler.membersNearby(player.server,offset,existingNation)) {
+                                                                    if (!TeamHandler.membersNearby(player.server, offset, existingNation)) {
                                                                         nationData.startSiege(existingNation, enemyNation, player.getLevel(), offset);
                                                                         gui2.close();
                                                                     } else {
@@ -686,19 +685,68 @@ public class Nations {
         return 0;
     }
 
-    public static boolean onMovePacket(ServerGamePacketListenerImpl packetHandler,ServerPlayer player, ServerboundMovePlayerPacket packet) {
+    public static boolean onMovePacket(ServerGamePacketListenerImpl packetHandler, ServerPlayer player, ServerboundMovePlayerPacket packet) {
         NationData nationData = NationData.getNationInstance(player.getLevel());
         if (nationData != null) {
             Siege siege = nationData.getActiveSiege();
             if (siege != null) {
-                if (siege.isAttacking(player) && TeamHandler.isPlayerNearClaim(player,siege.getClaimPos())) {
-                    player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
-                    packetHandler.teleport(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
-                    return true;
+                if (siege.isAttacking(player) && TeamHandler.isPlayerNearClaim(player, siege.getClaimPos())) {
+                    if (packet.hasPosition()) {
+                        player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
+                        Vec3 newPos = getNearestLegalPosition(player.position(), siege.getClaimPos(), 1);
+                        packetHandler.teleport(newPos.x, newPos.y, newPos.z, player.getYRot(), player.getXRot());
+                        return true;
+                    }
                 }
             }
         }
         return false;
+    }
+
+    static Vec3 getNearestLegalPosition(Vec3 position, ChunkPos claim, int radius) {
+        double playerX = position.x;
+        double playerZ = position.z;
+
+        int minLegalX = claim.getMinBlockX() - 16 * radius;
+        int minLegalZ = claim.getMinBlockZ() - 16 * radius;
+
+        int maxLegalX = claim.getMaxBlockX() + 16 * radius;
+        int maxLegalZ = claim.getMaxBlockZ() + 16 * radius;
+
+        double toMoveZ1 = maxLegalZ - playerZ;//distance to south border
+        double toMoveX1 = maxLegalX - playerX;//distance to east border
+
+        double toMoveZ2 = playerZ - minLegalZ;//distance to north border
+        double toMoveX2 = playerX - minLegalX;//distance to west border
+
+        TreeMap<Double, Direction> map = new TreeMap<>();
+        map.put(toMoveZ1, Direction.SOUTH);
+        map.put(toMoveX1, Direction.EAST);
+        map.put(toMoveZ2, Direction.NORTH);
+        map.put(toMoveX2, Direction.WEST);
+        double y = position.y;
+
+        Direction toMove = map.get(map.keySet().iterator().next());
+
+        double backTeleport = .1;
+
+        switch (toMove) {
+            case NORTH -> {
+                return new Vec3(playerX, y, minLegalZ - backTeleport);
+            }
+            case EAST -> {
+                return new Vec3(maxLegalX + 1 + backTeleport, y, playerZ);
+            }
+            case SOUTH -> {
+                return new Vec3(playerX, y, maxLegalZ + 1 + backTeleport);
+            }
+            case WEST -> {
+                return new Vec3(minLegalX - backTeleport, y, playerZ);
+            }
+            default -> {
+                return new Vec3(playerX, y, minLegalZ - backTeleport);
+            }
+        }
     }
 
 }
