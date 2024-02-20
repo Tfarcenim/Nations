@@ -2,6 +2,7 @@ package tfar.nations;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -110,6 +111,16 @@ public class TeamHandler {
                         ClientboundSetPlayerTeamPacket.Action.REMOVE));//add the player to the team
                 other.connection.send(ClientboundSetPlayerTeamPacket.createPlayerPacket(enemies, about.getGameProfile().getName(),
                         ClientboundSetPlayerTeamPacket.Action.REMOVE));//add the player to the team
+            }
+        }
+    }
+
+    public static void sendMessageToTeam(MinecraftServer server,Component component,Nation nation) {
+        Set<GameProfile> profiles = nation.getMembers();
+        for (GameProfile gameProfile : profiles) {
+            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
+            if (player != null) {
+                player.sendSystemMessage(component);
             }
         }
     }

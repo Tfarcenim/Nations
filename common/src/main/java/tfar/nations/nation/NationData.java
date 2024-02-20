@@ -4,11 +4,11 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 import tfar.nations.Nations;
@@ -42,7 +42,7 @@ public class NationData extends SavedData {
     }
 
     public static NationData getOrCreateDefaultNationsInstance(MinecraftServer server) {
-        return getOrCreateNationInstance(server.getLevel(Level.OVERWORLD));
+        return getOrCreateNationInstance(server.overworld());
     }
 
     public static NationData loadStatic(CompoundTag compoundTag,ServerLevel level) {
@@ -70,6 +70,20 @@ public class NationData extends SavedData {
             invites.put(gameProfile.getId(),nation);
         }
         setDirty();
+    }
+
+    public void awardNearbyClaimsToAttackers(Nation attackers,Nation defenders,ChunkPos pos) {
+        int radius = 1;
+        for (int z = -radius; z < radius + 1;z++) {
+            for (int x = -radius; x < radius + 1;x++) {
+                ChunkPos around = new ChunkPos(pos.x+x,pos.z+z);
+                Nation nation = chunkLookup.get(around);
+                if (nation == defenders) {
+                    removeClaim(defenders,around);
+                    addClaim(attackers,around);
+                }
+            }
+        }
     }
 
     public void sendAllyInvites(Nation fromNation,Nation toNation) {
@@ -147,7 +161,7 @@ public class NationData extends SavedData {
         }
 
         if (activeSiege != null && activeSiege.isInvolved(toRemove)) {
-            endSiege();
+            endSiege(Siege.Result.TERMINATED);
         }
 
         for (GameProfile profile : toRemove.getMembers()) {
@@ -161,14 +175,22 @@ public class NationData extends SavedData {
         return b;
     }
 
-    public void endSiege() {
-        activeSiege = null;
-        setDirty();
+    public boolean endSiege(Siege.Result result) {
+        if (activeSiege != null) {
+            activeSiege.end(result,this);
+            activeSiege = null;
+            setDirty();
+            return true;
+        }
+        return false;
     }
 
     public void startSiege(Nation attacking, Nation defending,ServerLevel level,ChunkPos pos) {
         if (activeSiege == null) {
             activeSiege = new Siege(attacking,defending,level , pos);
+            level.getServer().getPlayerList().broadcastSystemMessage(Component.literal(attacking.getName()+" is starting a siege on "+defending.getName())
+                    ,false);
+            TeamHandler.sendMessageToTeam(level.getServer(),Component.literal("Warning, claim at ("+pos.x+","+pos.z+") is under attack!"),defending);
         }
     }
     public void tick(ServerLevel level) {

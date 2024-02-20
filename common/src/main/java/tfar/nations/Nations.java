@@ -71,15 +71,26 @@ public class Nations {
 
         NationData nationData = NationData.getOrCreateDefaultNationsInstance(player.server);
         Siege siege = nationData.getActiveSiege();
-        if (siege != null && siege.isAttacking(player)) {
-            if (TeamHandler.isPlayerNearClaim(player, siege.getClaimPos())) {
-                nationData.endSiege();
-            }
+        if (siege != null && siege.isPlayerInvolved(player)) {
+            nationData.endSiege(Siege.Result.TERMINATED);
         }
 
         TeamHandler.updateSelf(player);
         TeamHandler.updateOthers(player);
     }
+
+    public static void logout(ServerPlayer player) {
+        NationData nationData = NationData.getOrCreateDefaultNationsInstance(player.server);
+        Siege siege = nationData.getActiveSiege();
+        if (siege != null) {
+            siege.attackerDefeated(player);
+            siege.defenderDefeated(player);
+        }
+
+//        TeamHandler.updateSelf(player);
+  //      TeamHandler.updateOthers(player);
+    }
+
 
     public static final Item YES = Items.GREEN_STAINED_GLASS_PANE;
     public static final Item NO = Items.RED_STAINED_GLASS_PANE;
@@ -107,8 +118,14 @@ public class Nations {
 
     private static int stopSiege(CommandContext<CommandSourceStack> commandContext) {
         NationData nationData = getOverworldInstance(commandContext);
-        nationData.endSiege();
-        return 1;
+        boolean worked = nationData.endSiege(Siege.Result.TERMINATED);
+        if (worked) {
+            commandContext.getSource().sendSuccess(Component.literal("Active siege cancelled"),false);
+            return 1;
+        } else {
+            commandContext.getSource().sendFailure(Component.literal("No active siege"));
+            return 0;
+        }
     }
 
     private static int createNation(CommandContext<CommandSourceStack> commandContext) {
@@ -502,7 +519,7 @@ public class Nations {
                                     .setName(Component.literal(name))
                                     .setCallback((index1, type1, action1, gui1) -> {
 
-                                        if (percentage > -.5) {
+                                        if (percentage >= .5) {
                                             SimpleGui siege2Gui = new SimpleGui(MenuType.GENERIC_9x6, player, false);
                                             siege2Gui.setTitle(Component.literal("Select Enemy Claim"));
                                             ChunkPos chunkPos = new ChunkPos(player.blockPosition());
@@ -553,13 +570,13 @@ public class Nations {
                                             }
                                             siege2Gui.open();
                                         } else {
-                                            player.sendSystemMessage(Component.literal("Not enough members online to raid"));
+                                            player.sendSystemMessage(Component.literal("Not enough members online to raid "+enemyNation.getName()));
                                         }
                                     })
                             );
-                            raidGui.open();
                         }
                     }
+                    raidGui.open();
                 })
         );
 
@@ -690,7 +707,7 @@ public class Nations {
         if (nationData != null) {
             Siege siege = nationData.getActiveSiege();
             if (siege != null) {
-                if (siege.isAttacking(player) && TeamHandler.isPlayerNearClaim(player, siege.getClaimPos())) {
+                if (siege.isAttacking(player) && siege.shouldBlockAttackers() && TeamHandler.isPlayerNearClaim(player, siege.getClaimPos())) {
                     if (packet.hasPosition()) {
                         player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
                         Vec3 newPos = getNearestLegalPosition(player.position(), siege.getClaimPos(), 1);

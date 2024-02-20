@@ -13,9 +13,11 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityTeleportEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import tfar.nations.datagen.Datagen;
@@ -25,23 +27,25 @@ import tfar.nations.platform.Services;
 
 @Mod(Nations.MOD_ID)
 public class NationsForge {
-    
+
     public NationsForge() {
-    
+
         // This method is invoked by the Forge mod loader when it is ready
         // to load your mod. You can access Forge and Common code in this
         // project.
-    
+
         // Use Forge to bootstrap the Common mod.
-       // Nations.LOG.info("Hello Forge world!");
+        // Nations.LOG.info("Hello Forge world!");
 
         MinecraftForge.EVENT_BUS.addListener(this::onCommandRegister);
         MinecraftForge.EVENT_BUS.addListener(this::playerLoggedIn);
+        MinecraftForge.EVENT_BUS.addListener(this::playerLoggedOut);
         MinecraftForge.EVENT_BUS.addListener(this::blockBreak);
         MinecraftForge.EVENT_BUS.addListener(this::blockInteract);
         MinecraftForge.EVENT_BUS.addListener(this::levelTick);
         MinecraftForge.EVENT_BUS.addListener(this::teleportEvent);
         MinecraftForge.EVENT_BUS.addListener(this::teleportPearlEvent);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW,this::playerDied);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(Datagen::gather);
         Nations.init();
     }
@@ -49,7 +53,7 @@ public class NationsForge {
     private void teleportEvent(EntityTeleportEvent.ChorusFruit event) {
         Entity entity = event.getEntity();
         if (entity instanceof ServerPlayer serverPlayer) {
-            if (onTeleportForge(serverPlayer,event.getTarget())) {
+            if (onTeleportForge(serverPlayer, event.getTarget())) {
                 event.setCanceled(true);
             }
         }
@@ -68,15 +72,15 @@ public class NationsForge {
         NationData nationData = NationData.getOrCreateNationInstance(player.getLevel());
         Siege siege = nationData.getActiveSiege();
         if (siege != null) {
-            if (siege.isAttacking(player) && TeamHandler.isPointInArea(target, siege.getClaimPos(),1)) {
-                    player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
-                    return true;
-                }
+            if (siege.isAttacking(player) && siege.shouldBlockAttackers() && TeamHandler.isPointInArea(target, siege.getClaimPos(), 1)) {
+                player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
+                return true;
             }
-        return false;
         }
+        return false;
+    }
 
-        private void levelTick(TickEvent.LevelTickEvent event) {
+    private void levelTick(TickEvent.LevelTickEvent event) {
         if (event.level instanceof ServerLevel serverLevel) {
             NationData nationData = NationData.getNationInstance(serverLevel);
             if (nationData != null) {
@@ -99,6 +103,10 @@ public class NationsForge {
                 if (nationChunk == nation || nationChunk.isAlly(nation)) {
 
                 } else {
+                    Siege siege = nationData.getActiveSiege();
+                    if (siege != null && siege.getClaimPos().equals(chunkPos) && !siege.shouldBlockAttackers()) {
+                        return;
+                    }
                     event.setCanceled(true);
                 }
             }
@@ -119,10 +127,28 @@ public class NationsForge {
                 if (nationChunk == nation || nationChunk.isAlly(nation)) {
 
                 } else {
+                    Siege siege = nationData.getActiveSiege();
+                    if (siege != null && siege.getClaimPos().equals(chunkPos) && !siege.shouldBlockAttackers()) {
+                        return;
+                    }
                     event.setCanceled(true);
                 }
             }
         }
+    }
+
+    private void playerDied(LivingDeathEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            NationData data = NationData.getOrCreateDefaultNationsInstance(serverPlayer.server);
+            Siege siege = data.getActiveSiege();
+            if (siege != null) {
+                siege.attackerDefeated(serverPlayer);
+                siege.defenderDefeated(serverPlayer);
+            }
+        }
+    }
+    private void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        Nations.logout((ServerPlayer) event.getEntity());
     }
 
     private void playerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {

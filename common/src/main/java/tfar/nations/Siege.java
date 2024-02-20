@@ -1,51 +1,161 @@
 package tfar.nations;
 
+import com.mojang.authlib.GameProfile;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
 import tfar.nations.platform.Services;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 public class Siege {
 
-    public static final int PRE_LENGTH = 60 * 20 * 1;
+
 
     private Nation attacking;
     private Nation defending;
+    private Set<GameProfile> surviving_attackers;
+    private Set<GameProfile> surviving_defenders;
     private final ServerLevel level;
     private final ChunkPos claimPos;
-    long age;
+    long time;
+    long stageTime;
+
+    ServerBossEvent serverBossEvent = new ServerBossEvent(Component.literal("Siege"), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);
 
     public Siege(Nation attacking, Nation defending, ServerLevel level, ChunkPos claimPos) {
         this.attacking = attacking;
         this.defending = defending;
         this.level = level;
         this.claimPos = claimPos;
+
+        List<ServerPlayer> attackers = attacking.getOnlineMembers(level.getServer());
+        List<ServerPlayer> defenders = defending.getOnlineMembers(level.getServer());
+
+        surviving_attackers = attackers.stream().map(Player::getGameProfile).collect(Collectors.toSet());
+        surviving_defenders = defenders.stream().map(Player::getGameProfile).collect(Collectors.toSet());
+        serverBossEvent.setName(Component.literal("Siege: Stage 1"));
+
+        for (ServerPlayer serverPlayer : attackers) {
+            serverBossEvent.addPlayer(serverPlayer);
+        }
+
+        for (ServerPlayer serverPlayer : defenders) {
+            serverBossEvent.addPlayer(serverPlayer);
+        }
     }
 
     public enum Stage {
-        PRE,ONGOING;
+        ONE(20 * 60 * 1),//5 minutes
+        TWO(20 * 60 * 1),//10 minutes
+        THREE(20 * 60 * 1);//5 minutes
+        private final long ticks;
+
+        Stage(long ticks) {
+            this.ticks = ticks;
+        }
+
+        public static Stage last() {
+            return Stage.values()[Stage.values().length - 1];
+        }
+
     }
+
+    public void attackerDefeated(ServerPlayer player) {
+        surviving_attackers.remove(player.getGameProfile());
+        checkSiegeCompletion();
+    }
+
+    public void defenderDefeated(ServerPlayer player) {
+        surviving_defenders.remove(player.getGameProfile());
+        checkSiegeCompletion();
+    }
+
+    public void checkSiegeCompletion() {
+        if (surviving_attackers.isEmpty()) {
+            NationData.getNationInstance(level.getServer().overworld()).endSiege(Result.DEFEAT);
+        }
+        if (surviving_defenders.isEmpty()) {
+            NationData.getNationInstance(level.getServer().overworld()).endSiege(Result.VICTORY);
+        }
+    }
+
 
     public ChunkPos getClaimPos() {
         return claimPos;
     }
 
+    private Stage stage = Stage.ONE;
     public Stage getStage() {
-        if (age < PRE_LENGTH) {
-            return Stage.PRE;
-        }
-        return Stage.ONGOING;
+        return stage;
     }
 
     public boolean isInvolved(Nation nation) {
         return nation == attacking || nation == defending;
     }
 
+    public boolean isPlayerInvolved(ServerPlayer player) {
+        Nation nation = Services.PLATFORM.getNation(player);
+        return isInvolved(nation);
+    }
+
+    public void tick() {
+        time++;
+        stageTime++;
+        serverBossEvent.setProgress((float) stageTime/stage.ticks);
+        if (stageTime >= stage.ticks) {
+            setNextStage();
+        }
+    }
+
+    public void setNextStage() {
+        if (stage != Stage.last()) {
+            stage = Stage.values()[stage.ordinal() + 1];
+            stageTime = 0;
+            serverBossEvent.setProgress(0);
+            serverBossEvent.setName(Component.literal("Siege: Stage "+(stage.ordinal() + 1)));
+
+        } else {
+            NationData.getNationInstance(level.getServer().overworld()).endSiege(Result.DEFEAT);
+        }
+    }
+
+    public enum Result {
+        TERMINATED,VICTORY,DEFEAT;//from perspective of the attackers
+    }
+
+    public void end(Result result, NationData nationData) {
+        serverBossEvent.removeAllPlayers();
+        switch (result) {
+            case TERMINATED -> {
+                level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("Siege has been terminated"),false);
+            }
+            case VICTORY -> {
+                level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("Attackers are victorious"),false);
+                nationData.awardNearbyClaimsToAttackers(attacking,defending,claimPos);
+            }
+            case DEFEAT -> {
+                level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("Attackers have been defeated"),false);
+            }
+        }
+    }
+
+
     public boolean isAttacking(ServerPlayer player) {
         return Services.PLATFORM.getNation(player) == attacking;
+    }
+
+    public boolean shouldBlockAttackers() {
+        return getStage() == Stage.ONE;
     }
 
     public Siege(CompoundTag tag, ServerLevel level, NationData lookup) {
@@ -53,7 +163,9 @@ public class Siege {
         attacking = lookup.getNationByName(tag.getString("attacking"));
         defending = lookup.getNationByName(tag.getString("defending"));
         claimPos = new ChunkPos(tag.getInt("x"),tag.getInt("z"));
-
+        stage = Stage.values()[tag.getInt("stage")];
+        time = tag.getLong("time");
+        stageTime = tag.getLong("stage_time");
     }
 
     public CompoundTag save() {
@@ -62,6 +174,9 @@ public class Siege {
         tag.putString("defending",defending.getName());
         tag.putInt("x", claimPos.x);
         tag.putInt("z", claimPos.z);
+        tag.putInt("stage",stage.ordinal());
+        tag.putLong("time",time);
+        tag.putLong("stage_time",stageTime);
         return tag;
     }
 
@@ -69,8 +184,5 @@ public class Siege {
         return new Siege(tag,level,lookup);
     }
 
-    public void tick() {
-        age++;
-    }
 
 }

@@ -238,9 +238,6 @@ public class ServerButtons {
                     SimpleGui onlineGui = new SimpleGui(MenuType.GENERIC_9x6, player, false);
                     onlineGui.setTitle(Component.literal("Online Players"));
                     List<ServerPlayer> allPlayers = player.server.getPlayerList().getPlayers();
-                    for (int i = 0; i < 54; i++) {
-                        allPlayers.add(player);
-                    }
 
                     final int pages = (int) Math.ceil(allPlayers.size() / 45f);
                     if (pages > 1) {
