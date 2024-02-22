@@ -10,7 +10,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.storage.PlayerDataStorage;
 import org.jetbrains.annotations.Nullable;
+import tfar.nations.Nations;
 import tfar.nations.TeamHandler;
+import tfar.nations.level.OfflineTrackerData;
 import tfar.nations.mixin.MinecraftServerAccessor;
 import tfar.nations.platform.Services;
 
@@ -69,6 +71,24 @@ public class Nation {
             promotable.removeIf(profile -> rank <= members.getInt(profile));
         }
         return promotable;
+    }
+
+    public boolean tick(MinecraftServer server) {
+        List<GameProfile> toKick = new ArrayList<>();
+        for (GameProfile profile : getMembers()) {
+            if (profile.equals(owner)) continue;
+            ServerPlayer player = server.getPlayerList().getPlayer(profile.getId());
+            if (player != null) continue;
+            long time = OfflineTrackerData.getOrCreateDefaultInstance(server).ticksSinceOnline(server,profile);
+            if (time > NationData.KICK_TIME) {
+                toKick.add(profile);
+                ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(owner.getId());
+                if (ownerPlayer != null)
+                    ownerPlayer.sendSystemMessage(Component.literal("Kicked "+ profile.getName() + " from nation for inactivity"));
+                }
+            }
+        removeGameProfiles(server,toKick);
+        return !toKick.isEmpty();
     }
 
     public int getColor() {

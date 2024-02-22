@@ -27,6 +27,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tfar.nations.level.OfflineTrackerData;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
 import tfar.nations.platform.Services;
@@ -86,6 +87,9 @@ public class Nations {
             siege.attackerDefeated(player);
             siege.defenderDefeated(player);
         }
+
+        OfflineTrackerData offlineTrackerData = OfflineTrackerData.getOrCreateDefaultInstance(player.server);
+        offlineTrackerData.saveTimeStamp(player);
 
 //        TeamHandler.updateSelf(player);
   //      TeamHandler.updateOthers(player);

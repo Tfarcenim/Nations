@@ -6,13 +6,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import tfar.nations.level.OfflineTrackerData;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
 import tfar.nations.platform.Services;
 import tfar.nations.sgui.api.elements.GuiElementBuilder;
 import tfar.nations.sgui.api.gui.SimpleGui;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -56,7 +56,9 @@ public class ServerButtons {
                         GuiElementBuilder elementBuilder = new GuiElementBuilder(Items.PLAYER_HEAD);
                         String name = gameProfile.getName();
                         if (player.server.getPlayerList().getPlayer(gameProfile.getId()) == null) {
-                            name += " (Offline)";
+                            long ticks = OfflineTrackerData.getOrCreateDefaultInstance(player.server).ticksSinceOnline(player.server,gameProfile);
+                            String time = OfflineTrackerData.formatTime(ticks);
+                            name += " (Offline) + last seen "+time+" ago";
                         }
                         exileGui.setSlot(i, elementBuilder
                                 .setSkullOwner(gameProfile, player.server)

@@ -29,6 +29,8 @@ public class NationData extends SavedData {
     @Nullable
     private Siege activeSiege;
 
+    public static final long KICK_TIME = 20 * 60 * 60 * 24 * 4;//4 irl days
+
     @Nullable
     public static NationData getNationInstance(ServerLevel serverLevel) {
         return serverLevel.getDataStorage()
@@ -196,8 +198,13 @@ public class NationData extends SavedData {
     public void tick(ServerLevel level) {
         if (activeSiege != null) {
             activeSiege.tick();
-            setDirty();
         }
+
+        boolean didAnything = false;
+        for (Nation nation : nations) {
+            didAnything |= nation.tick(level.getServer());
+        }
+        if (didAnything) setDirty();
     }
 
     public List<Nation> getNations() {
@@ -355,4 +362,5 @@ public class NationData extends SavedData {
         setDirty();
         return true;
     }
+
 }
