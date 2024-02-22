@@ -25,6 +25,9 @@ import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
 import tfar.nations.platform.Services;
 
+import java.time.Instant;
+import java.util.Date;
+
 @Mod(Nations.MOD_ID)
 public class NationsForge {
 
@@ -36,6 +39,8 @@ public class NationsForge {
 
         // Use Forge to bootstrap the Common mod.
         // Nations.LOG.info("Hello Forge world!");
+
+        long epochSecond = Instant.now().getEpochSecond();
 
         MinecraftForge.EVENT_BUS.addListener(this::onCommandRegister);
         MinecraftForge.EVENT_BUS.addListener(this::playerLoggedIn);

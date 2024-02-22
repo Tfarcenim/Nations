@@ -219,10 +219,20 @@ public class NationData extends SavedData {
         return activeSiege;
     }
 
-    public void addClaim(Nation nation,ChunkPos chunkPos) {
-        nation.getClaimed().add(chunkPos);
-        chunkLookup.put(chunkPos,nation);
-        setDirty();
+    public void addClaims(Nation nation, Set<ChunkPos> poss) {
+        for (ChunkPos pos : poss) {
+            addClaim(nation,pos);
+        }
+    }
+
+    public Nation addClaim(Nation nation,ChunkPos chunkPos) {
+        Nation existing = chunkLookup.get(chunkPos);
+        if (existing == null) {
+            nation.getClaimed().add(chunkPos);
+            chunkLookup.put(chunkPos, nation);
+            setDirty();
+        }
+        return existing;
     }
 
     public void removeClaim(Nation nation,ChunkPos chunkPos) {

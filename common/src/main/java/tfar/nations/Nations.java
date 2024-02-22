@@ -287,85 +287,10 @@ public class Nations {
                 }));
 
         teamLeaderMenu.setSlot(1, ServerButtons.managePlayersButton(player, nationData, existingNation));
+        teamLeaderMenu.setSlot(2,ServerButtons.claimChunksButton2(player, nationData, existingNation));
+        teamLeaderMenu.setSlot(3,ServerButtons.unClaimChunksButton1(player, nationData, existingNation));
 
-        teamLeaderMenu.setSlot(2, new GuiElementBuilder()
-                .setItem(Items.WHITE_BANNER)
-                .setName(Component.literal("Claim land"))
-                .setCallback((index, type, action) -> {
-                    SimpleGui claimGui = new SimpleGui(MenuType.GENERIC_9x6, player, false);
-                    claimGui.setTitle(Component.literal("Claim land"));
-                    ChunkPos chunkPos = new ChunkPos(player.blockPosition());
-                    int index1 = 0;
-                    for (int z = -2; z < 4; z++) {
-                        for (int x = -4; x < 5; x++) {
-                            ChunkPos offset = new ChunkPos(chunkPos.x + x, chunkPos.z + z);
-
-                            Nation claimed = nationData.getNationAtChunk(offset);
-                            Item icon = Items.LIGHT_GRAY_STAINED_GLASS_PANE;
-
-                            if (claimed != null) {
-                                if (claimed == existingNation) icon = Items.GREEN_STAINED_GLASS_PANE;
-                                else {
-                                    icon = Items.RED_STAINED_GLASS_PANE;
-                                }
-                            }
-
-                            String nationName = claimed != null ? claimed.getName() : "Wilderness";
-                            boolean glow = offset.equals(chunkPos);
-
-                            GuiElementBuilder elementBuilder = new GuiElementBuilder()
-                                    .setItem(icon)
-                                    .setName(Component.literal(nationName + " (" + offset.x + "," + offset.z + ")"))
-                                    .setCallback((index2, type1, action1, gui) -> {
-                                        GuiElementInterface slot = gui.getSlot(index2);
-                                        ItemStack stack = slot.getItemStack();
-
-
-                                        if (stack.is(Items.LIGHT_GRAY_STAINED_GLASS_PANE)) {
-
-                                            boolean checkPower = existingNation.canClaim();
-                                            if (checkPower) {
-                                                ItemStack newClaim = new ItemStack(Items.GREEN_STAINED_GLASS_PANE);
-                                                if (glow) {
-                                                    newClaim.enchant(Enchantments.UNBREAKING, 0);
-                                                    newClaim.getTag().putByte("HideFlags", (byte) ItemStack.TooltipPart.ENCHANTMENTS.getMask());
-                                                }
-                                                newClaim.setHoverName(Component.literal(existingNation.getName() + " (" + offset.x + "," + offset.z + ")")
-                                                        .withStyle(NO_ITALIC));
-                                                ((GuiElement) slot).setItemStack(newClaim);
-                                                nationData.addClaim(existingNation, offset);
-                                            } else {
-                                                player.sendSystemMessage(Component.literal("Insufficient nation power"));
-                                            }
-
-                                        } else if (stack.is(Items.GREEN_STAINED_GLASS_PANE)) {
-                                            ItemStack wilderness = new ItemStack(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
-
-                                            if (glow) {
-                                                wilderness.enchant(Enchantments.UNBREAKING, 0);
-                                                wilderness.getTag().putByte("HideFlags", (byte) ItemStack.TooltipPart.ENCHANTMENTS.getMask());
-                                            }
-
-                                            nationData.removeClaim(existingNation, offset);
-                                            wilderness.setHoverName(Component.literal("Wilderness (" + offset.x + "," + offset.z + ")").withStyle(NO_ITALIC));
-                                            ((GuiElement) slot).setItemStack(wilderness);
-                                        }
-                                    });
-
-                            if (glow) {
-                                elementBuilder.glow();
-                            }
-
-                            claimGui.setSlot(index1, elementBuilder);
-                            index1++;
-                        }
-                    }
-
-                    claimGui.open();
-                })
-        );
-
-        teamLeaderMenu.setSlot(3, new GuiElementBuilder()
+        teamLeaderMenu.setSlot(4, new GuiElementBuilder()
                 .setItem(Items.SHIELD)
                 .setName(Component.literal("Nation Politics"))
                 .setCallback((index, type, action, gui) -> {
@@ -497,9 +422,9 @@ public class Nations {
                 })
         );
 
-        teamLeaderMenu.setSlot(4, ServerButtons.topNationsButton(player, nationData));
-        teamLeaderMenu.setSlot(5, ServerButtons.onlinePlayersButton(player, nationData));
-        teamLeaderMenu.setSlot(6, new GuiElementBuilder(Items.RED_BANNER)
+        teamLeaderMenu.setSlot(5, ServerButtons.topNationsButton(player, nationData));
+        teamLeaderMenu.setSlot(6, ServerButtons.onlinePlayersButton(player, nationData));
+        teamLeaderMenu.setSlot(7, new GuiElementBuilder(Items.RED_BANNER)
                 .setName(Component.literal("Declare Siege"))
                 .setCallback((index, type, action, gui) -> {
                     SimpleGui raidGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);

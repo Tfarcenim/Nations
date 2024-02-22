@@ -140,8 +140,13 @@ public class Nation {
     }
 
     public boolean canClaim() {
-        return claimed.size() < getTotalPower();
+        return canClaim(1);
     }
+
+    public boolean canClaim(int count) {
+        return (claimed.size()+ count - 1) < getTotalPower();
+    }
+
 
     public boolean isOwner(ServerPlayer player) {
         return player.getGameProfile().equals(owner);
