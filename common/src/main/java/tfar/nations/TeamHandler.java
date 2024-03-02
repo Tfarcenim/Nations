@@ -5,7 +5,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -13,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import tfar.nations.nation.Nation;
-import tfar.nations.platform.Services;
+import tfar.nations.nation.NationData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,9 +20,9 @@ import java.util.Set;
 
 public class TeamHandler {
 
-    public static void updateSelf(ServerPlayer to) {
+    public static void updateSelf(ServerPlayer to, NationData nationData) {
         MinecraftServer server = to.server;
-        Nation aboutNation = Services.PLATFORM.getNation(to);
+        Nation aboutNation = nationData.getNationOf(to);
         if (aboutNation == null) return;//this player has no colors
         List<ServerPlayer> friendly = new ArrayList<>();
         List<ServerPlayer> enemy = new ArrayList<>();
@@ -31,7 +30,7 @@ public class TeamHandler {
             if (player == to) {
                 continue;
             } else {
-                Nation nation = Services.PLATFORM.getNation(player);
+                Nation nation = nationData.getNationOf(player);
                 if (nation == null) continue;//skip players that don't have a nation
                 if (nation == aboutNation) {
                     friendly.add(player);
@@ -47,7 +46,6 @@ public class TeamHandler {
     }
 
     public static void removeAllTeams(ServerPlayer to) {
-        MinecraftServer server = to.server;
         Scoreboard dummy = new Scoreboard();
 
         PlayerTeam friends = new PlayerTeam(dummy,"friends");
@@ -58,18 +56,18 @@ public class TeamHandler {
         to.connection.send(ClientboundSetPlayerTeamPacket.createRemovePacket(enemies));//create the team
     }
 
-    public static void updateAll(ServerPlayer player) {
-        updateSelf(player);
-        updateOthers(player);
+    public static void updateAll(ServerPlayer player,NationData nationData) {
+        updateSelf(player, nationData);
+        updateOthers(player, nationData);
     }
 
-    public static void updateOthers(ServerPlayer player) {
+    public static void updateOthers(ServerPlayer player,NationData nationData) {
         List<ServerPlayer> players = new ArrayList<>(player.server.getPlayerList().getPlayers());
         players.remove(player);
-        TeamHandler.updateOnlinePlayers(player,players);
+        TeamHandler.updateOnlinePlayers(player,players,nationData);
     }
 
-    private static void updateOnlinePlayers(ServerPlayer about,List<ServerPlayer> others) {
+    private static void updateOnlinePlayers(ServerPlayer about,List<ServerPlayer> others,NationData nationData) {
         Scoreboard dummy = new Scoreboard();
 
         PlayerTeam friends = new PlayerTeam(dummy,"friends");
@@ -79,7 +77,7 @@ public class TeamHandler {
         enemies.setColor(ChatFormatting.RED);
 
 
-        Nation aboutNation = Services.PLATFORM.getNation(about);
+        Nation aboutNation = nationData.getNationOf(about);
         if (aboutNation == null) {
             for (ServerPlayer other : others) {
                 other.connection.send(ClientboundSetPlayerTeamPacket.createPlayerPacket(friends, about.getGameProfile().getName(),
@@ -92,7 +90,7 @@ public class TeamHandler {
 
 
         for (ServerPlayer other : others) {
-            Nation nation = Services.PLATFORM.getNation(other);
+            Nation nation = nationData.getNationOf(other);
             if (nation == null) continue;//skip players that don't have a nation
             PlayerTeam sendTeam = null;
             if (nation == aboutNation) {

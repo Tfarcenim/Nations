@@ -3,6 +3,7 @@ package tfar.nations.sgui.api;
 import net.minecraft.core.Registry;
 import net.minecraft.world.inventory.MenuType;
 import org.apache.commons.lang3.ArrayUtils;
+import tfar.nations.sgui.api.gui.GuiInterface;
 
 /**
  * Screen Properties
@@ -11,7 +12,7 @@ import org.apache.commons.lang3.ArrayUtils;
  * update visual or logical elements of the screen. <br>
  * Screen properties are specific to the {@link MenuType} that they modify.
  * 
- * @see eu.pb4.sgui.api.gui.GuiInterface#sendProperty(ScreenProperty, int)
+ * @see GuiInterface(ScreenProperty, int)
  */
 @SuppressWarnings("unused")
 public enum ScreenProperty {

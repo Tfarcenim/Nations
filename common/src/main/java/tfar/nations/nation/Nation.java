@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.storage.PlayerDataStorage;
 import org.jetbrains.annotations.Nullable;
-import tfar.nations.Nations;
 import tfar.nations.TeamHandler;
 import tfar.nations.level.OfflineTrackerData;
 import tfar.nations.mixin.MinecraftServerAccessor;
@@ -99,19 +98,17 @@ public class Nation {
         this.color = color;
     }
 
-    public void addPlayers(Collection<ServerPlayer> players) {
+    void addPlayers(Collection<ServerPlayer> players,NationData nationData) {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
             members.put(gameProfile, 0);
-            Services.PLATFORM.setNation(player, this);
-            TeamHandler.updateOthers(player);
-            TeamHandler.updateSelf(player);
+            TeamHandler.updateOthers(player, nationData);
+            TeamHandler.updateSelf(player, nationData);
         }
     }
 
     public void setOwner(ServerPlayer newOwner) {
         this.owner = newOwner.getGameProfile();
-        addPlayers(List.of(newOwner));
         members.put(owner, 2);
     }
 
@@ -152,12 +149,11 @@ public class Nation {
         return player.getGameProfile().equals(owner);
     }
 
-    public void removePlayers(Collection<ServerPlayer> players) {
+    public void removePlayers(Collection<ServerPlayer> players,NationData nationData) {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
             members.removeInt(gameProfile);
-            Services.PLATFORM.setNation(player, null);
-            TeamHandler.updateOthers(player);
+            TeamHandler.updateOthers(player,nationData );
             TeamHandler.removeAllTeams(player);
         }
     }
@@ -167,14 +163,12 @@ public class Nation {
             ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
             if (player != null) {
                 player.sendSystemMessage(Component.literal("You have been exiled from " + name));
-                Services.PLATFORM.setNation(player, null);
                 TeamHandler.removeAllTeams(player);
             } else {
                 PlayerDataStorage playerDataStorage = ((MinecraftServerAccessor) server).getPlayerDataStorage();
                 ServerPlayer fakePlayer = Services.PLATFORM.getFakePlayer(server.overworld(), gameProfile);
                 CompoundTag nbt = playerDataStorage.load(fakePlayer);
                 if (nbt != null) {
-                    Services.PLATFORM.setNation(fakePlayer, null);
                     playerDataStorage.save(fakePlayer);
                 }
             }

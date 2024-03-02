@@ -111,8 +111,8 @@ public class Siege {
         return nation == attacking || nation == defending;
     }
 
-    public boolean isPlayerInvolved(ServerPlayer player) {
-        Nation nation = Services.PLATFORM.getNation(player);
+    public boolean isPlayerInvolved(ServerPlayer player, NationData nationData) {
+        Nation nation = nationData.getNationOf(player);
         return isInvolved(nation);
     }
 
@@ -187,8 +187,8 @@ public class Siege {
     }
 
 
-    public boolean isAttacking(ServerPlayer player) {
-        return Services.PLATFORM.getNation(player) == attacking;
+    public boolean isAttacking(ServerPlayer player,NationData nationData) {
+        return nationData.getNationOf(player) == attacking;
     }
 
     public boolean shouldBlockAttackers() {

@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import tfar.nations.level.OfflineTrackerData;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
-import tfar.nations.platform.Services;
 import tfar.nations.sgui.api.ClickType;
 import tfar.nations.sgui.api.elements.*;
 import tfar.nations.sgui.api.gui.SimpleGui;
@@ -72,12 +71,12 @@ public class Nations {
 
         NationData nationData = NationData.getOrCreateDefaultNationsInstance(player.server);
         Siege siege = nationData.getActiveSiege();
-        if (siege != null && siege.isPlayerInvolved(player)) {
+        if (siege != null && siege.isPlayerInvolved(player,nationData)) {
             nationData.endSiege(Siege.Result.TERMINATED);
         }
 
-        TeamHandler.updateSelf(player);
-        TeamHandler.updateOthers(player);
+        TeamHandler.updateSelf(player, nationData);
+        TeamHandler.updateOthers(player, nationData);
     }
 
     public static void logout(ServerPlayer player) {
@@ -102,7 +101,14 @@ public class Nations {
 
     public static void onCommandRegister(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal(MOD_ID)
-                .executes(Nations::openGui));
+                .executes(Nations::openGui)
+                .then(Commands.literal("rename")
+
+                        .then(Commands.argument("nation",StringArgumentType.string()).suggests(LEADER_OR_OP)
+                                .then(Commands.argument("name",StringArgumentType.string())
+                        .executes(Nations::renameNation)
+                )
+        )));
 
         dispatcher.register(Commands.literal("nationsop")
                 .requires(p -> p.hasPermission(Commands.LEVEL_GAMEMASTERS))
@@ -110,7 +116,7 @@ public class Nations {
                         .then(Commands.argument("name", StringArgumentType.string())
                                 .executes(Nations::createNation)))
                 .then(Commands.literal("remove")
-                        .then(Commands.argument("name", StringArgumentType.string()).suggests(NATIONS)
+                        .then(Commands.argument("name", StringArgumentType.string()).suggests(ALL_NATIONS)
                                 .executes(Nations::removeNation)))
                 .then(Commands.literal("siege")
                         .then(Commands.literal("stop")
@@ -158,10 +164,54 @@ public class Nations {
         return NationData.getOrCreateDefaultNationsInstance(server);
     }
 
-    private static final SuggestionProvider<CommandSourceStack> NATIONS = (commandContext, suggestionsBuilder) -> {
+    private static final SuggestionProvider<CommandSourceStack> ALL_NATIONS = (commandContext, suggestionsBuilder) -> {
         List<String> collection = Nations.getOverworldInstance(commandContext).getNations().stream().map(Nation::getName).toList();
         return SharedSuggestionProvider.suggest(collection, suggestionsBuilder);
     };
+
+    private static final SuggestionProvider<CommandSourceStack> LEADER_OR_OP = (commandContext, suggestionsBuilder) -> {
+        List<Nation> nations = new ArrayList<>(Nations.getOverworldInstance(commandContext).getNations());
+        CommandSourceStack commandSourceStack = commandContext.getSource();
+        if (!commandSourceStack.hasPermission(Commands.LEVEL_GAMEMASTERS)) {
+            if (commandSourceStack.isPlayer()) {
+                nations.removeIf(nation -> !nation.isOwner(commandSourceStack.getPlayer()));
+            } else {
+                nations.clear();
+            }
+        }
+        return SharedSuggestionProvider.suggest(nations.stream().map(Nation::getName), suggestionsBuilder);
+    };
+
+    private static int renameNation(CommandContext<CommandSourceStack> commandContext) {
+        CommandSourceStack commandSourceStack = commandContext.getSource();
+        NationData nationData = getOverworldInstance(commandContext);
+
+        String nationString = StringArgumentType.getString(commandContext,"nation");
+        String name = StringArgumentType.getString(commandContext,"name");
+        Nation nation = nationData.getNationByName(nationString);
+        if (nation == null) {
+            commandSourceStack.sendFailure(Component.literal("Nation with name "+nationString +" doesn't exist"));
+            return 0;
+        }
+
+        if (!commandSourceStack.hasPermission(Commands.LEVEL_GAMEMASTERS)) {
+            ServerPlayer player = commandSourceStack.getPlayer();
+            if (player == null) {
+                commandSourceStack.sendFailure(Component.literal("Insufficient Permission to edit " + nationString +" name"));
+                return 0;
+            } else {
+                if (!nation.isOwner(player)) {
+                    commandSourceStack.sendFailure(Component.literal("Only team leaders or OPs can edit nation names"));
+                    return 0;
+                }
+            }
+        }
+
+        String oldName = nation.getName();
+        nationData.renameNation(nation,name);
+        commandSourceStack.sendSuccess(Component.literal("Renamed nation "+oldName +" to "+name),true);
+        return 1;
+    }
 
     private static int openGui(CommandContext<CommandSourceStack> objectCommandContext) {
         try {
@@ -172,8 +222,8 @@ public class Nations {
                 return 0;
             }
 
-            Nation existingNation = Services.PLATFORM.getNation(player);
-            NationData nationData = NationData.getOrCreateDefaultNationsInstance(player.server);
+            NationData nationData = getOverworldInstance(objectCommandContext);
+            Nation existingNation = nationData.getNationOf(player);
 
             Nation invitedTo = nationData.getInviteForPlayer(player);
 
@@ -514,9 +564,9 @@ public class Nations {
 
     static final UnaryOperator<Style> NO_ITALIC = style -> style.withItalic(false);
 
-    static List<ServerPlayer> getUninvitedPlayers(ServerPlayer leader, Nation nation) {
+    static List<ServerPlayer> getUninvitedPlayers(ServerPlayer leader, NationData nationData) {
         List<ServerPlayer> allPlayers = new ArrayList<>(leader.server.getPlayerList().getPlayers());
-        allPlayers.removeIf(player -> Services.PLATFORM.getNation(player) != null);
+        allPlayers.removeIf(player -> nationData.getNationOf(player) != null);
         return allPlayers;
     }
 
@@ -636,7 +686,7 @@ public class Nations {
         if (nationData != null) {
             Siege siege = nationData.getActiveSiege();
             if (siege != null) {
-                if (siege.isAttacking(player) && siege.shouldBlockAttackers() && TeamHandler.isPlayerNearClaim(player, siege.getClaimPos())) {
+                if (siege.isAttacking(player, nationData) && siege.shouldBlockAttackers() && TeamHandler.isPlayerNearClaim(player, siege.getClaimPos())) {
                     if (packet.hasPosition()) {
                         player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
                         Vec3 newPos = getNearestLegalPosition(player.position(), siege.getClaimPos(), 1);

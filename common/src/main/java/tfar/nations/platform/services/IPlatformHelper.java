@@ -40,9 +40,7 @@ public interface IPlatformHelper {
         return isDevelopmentEnvironment() ? "development" : "production";
     }
 
-    void setNation(ServerPlayer player,@Nullable Nation nation);
-    @Nullable
-    Nation getNation(ServerPlayer player);
+
     ServerPlayer getFakePlayer(ServerLevel level, GameProfile gameProfile);
 
 }

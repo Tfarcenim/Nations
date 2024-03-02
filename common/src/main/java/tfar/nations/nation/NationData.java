@@ -23,6 +23,8 @@ public class NationData extends SavedData {
     private final List<Nation> nations = new ArrayList<>();
     private final Map<String,Nation> nationsLookup = new HashMap<>();
     private final Map<ChunkPos,Nation> chunkLookup = new HashMap<>();
+    private final Map<GameProfile,Nation> playerLookup = new HashMap<>();
+
     private final Map<UUID,Nation> invites = new HashMap<>();
     private final Map<Nation,Nation> allyInvites = new HashMap<>();
 
@@ -61,6 +63,14 @@ public class NationData extends SavedData {
         nationsLookup.put(name,nation);
         setDirty();
         return nation;
+    }
+
+    public void renameNation(Nation nation, String name) {
+        String oldName = nation.getName();
+        nationsLookup.remove(oldName);
+        nation.setName(name);
+        nationsLookup.put(name,nation);
+        setDirty();
     }
 
     public Nation getNationAtChunk(ChunkPos chunkPos) {
@@ -105,7 +115,7 @@ public class NationData extends SavedData {
         for (GameProfile gameProfile : allProfiles) {
             ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
             if (player != null) {
-                TeamHandler.updateOthers(player);
+                TeamHandler.updateOthers(player, this);
             }
         }
 
@@ -126,7 +136,7 @@ public class NationData extends SavedData {
         for (GameProfile gameProfile : allProfiles) {
             ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
             if (player != null) {
-                TeamHandler.updateOthers(player);
+                TeamHandler.updateOthers(player, this);
             }
         }
 
@@ -169,7 +179,7 @@ public class NationData extends SavedData {
         for (GameProfile profile : toRemove.getMembers()) {
             ServerPlayer player = server.getPlayerList().getPlayer(profile.getId());
             if (player != null) {
-                TeamHandler.updateOthers(player);
+                TeamHandler.updateOthers(player, this);
             }
         }
 
@@ -245,11 +255,13 @@ public class NationData extends SavedData {
         nations.clear();
         nationsLookup.clear();
         chunkLookup.clear();
+        playerLookup.clear();
         ListTag listTag = tag.getList(Nations.MOD_ID, Tag.TAG_COMPOUND);
         for (Tag tag1 : listTag) {
             CompoundTag compoundTag = (CompoundTag) tag1;
             Nation nation = Nation.loadStatic(compoundTag);
             nation.getClaimed().forEach(chunkPos -> chunkLookup.put(chunkPos,nation));
+            nation.getMembers().forEach(gameProfile -> playerLookup.put(gameProfile,nation));
             nations.add(nation);
             nationsLookup.put(nation.getName(),nation);
         }
@@ -284,7 +296,7 @@ public class NationData extends SavedData {
         for (GameProfile gameProfile : allProfiles) {
             ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
             if (player != null) {
-                TeamHandler.updateOthers(player);
+                TeamHandler.updateOthers(player, this);
             }
         }
 
@@ -295,7 +307,7 @@ public class NationData extends SavedData {
     public boolean joinNation(String name, Collection<ServerPlayer> serverPlayers) {
         Nation nation = getNationByName(name);
         if (nation != null) {
-            nation.addPlayers(serverPlayers);
+            nation.addPlayers(serverPlayers, this);
             setDirty();
             return true;
         }
@@ -358,10 +370,17 @@ public class NationData extends SavedData {
 
     public boolean leaveNation(Collection<ServerPlayer> serverPlayers) {
         for (Nation nation : nations) {
-            nation.removePlayers(serverPlayers);
+            nation.removePlayers(serverPlayers, this);
         }
         setDirty();
         return true;
+    }
+
+    @Override
+    public void setDirty() {
+        super.setDirty();
+        playerLookup.clear();
+        nations.forEach(nation -> nation.getMembers().forEach(gameProfile -> playerLookup.put(gameProfile,nation)));
     }
 
     public boolean leaveNationGameProfiles(MinecraftServer server, Collection<GameProfile> serverPlayers) {
@@ -371,6 +390,10 @@ public class NationData extends SavedData {
 
         setDirty();
         return true;
+    }
+
+    public Nation getNationOf(ServerPlayer player) {
+        return playerLookup.get(player.getGameProfile());
     }
 
 }

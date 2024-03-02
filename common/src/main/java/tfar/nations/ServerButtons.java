@@ -12,7 +12,6 @@ import net.minecraft.world.level.ChunkPos;
 import tfar.nations.level.OfflineTrackerData;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
-import tfar.nations.platform.Services;
 import tfar.nations.sgui.api.elements.GuiElement;
 import tfar.nations.sgui.api.elements.GuiElementBuilder;
 import tfar.nations.sgui.api.elements.GuiElementInterface;
@@ -37,7 +36,7 @@ public class ServerButtons {
                         Nation nation = nations.get(i);
                         nationsTopGui.setSlot(i, new GuiElementBuilder(Items.PLAYER_HEAD)
                                 .setSkullOwner(nation.getOwner(), player.server)
-                                .setName(Component.literal(nation.getOwner().getName() + " - " + nation.getTotalPower() + " Power"))
+                                .setName(Component.literal(nation.getName() + " - " + nation.getTotalPower() + " Power"))
                                 .setCallback((index2, type2, action2, gui2) -> {
                                 })
                         );
@@ -85,7 +84,7 @@ public class ServerButtons {
                     SimpleGui inviteGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
 
                     inviteGui.setTitle(Component.literal("Invite Players"));
-                    List<ServerPlayer> eligible = Nations.getUninvitedPlayers(player, existingNation);
+                    List<ServerPlayer> eligible = Nations.getUninvitedPlayers(player, nationData);
                     int i = 0;
                     for (ServerPlayer invitePlayer : eligible) {
                         GuiElementBuilder elementBuilder = new GuiElementBuilder();
@@ -247,14 +246,14 @@ public class ServerButtons {
                     final int pages = (int) Math.ceil(allPlayers.size() / 45f);
                     if (pages > 1) {
                         int[] page = new int[]{0};
-                        updateOnlinePage(onlineGui, page[0], allPlayers);
+                        updateOnlinePage(onlineGui, page[0], allPlayers, nationData);
 
                         onlineGui.setSlot(45, new GuiElementBuilder(Items.ARROW)
                                 .setName(Component.literal("left"))
                                 .setCallback((index1, type1, action1, gui) -> {
                                     if (page[0] >= 1) {
                                         page[0]--;
-                                        updateOnlinePage(onlineGui, page[0], allPlayers);
+                                        updateOnlinePage(onlineGui, page[0], allPlayers, nationData);
                                     }
                                 })
                         );
@@ -264,7 +263,7 @@ public class ServerButtons {
                                 .setCallback((index1, type1, action1, gui) -> {
                                     if (page[0] < pages - 1) {
                                         page[0]++;
-                                        updateOnlinePage(onlineGui, page[0], allPlayers);
+                                        updateOnlinePage(onlineGui, page[0], allPlayers, nationData);
                                     }
                                 })
                         );
@@ -273,7 +272,7 @@ public class ServerButtons {
                         for (int i = 0; i < allPlayers.size(); i++) {
                             ServerPlayer serverPlayer = allPlayers.get(i);
 
-                            Nation nation = Services.PLATFORM.getNation(serverPlayer);
+                            Nation nation = nationData.getNationOf(serverPlayer);
                             String nationName = nation != null ? nation.getName() : "None";
                             String string = serverPlayer.getGameProfile().getName() + " | " + nationName;
 
@@ -287,12 +286,12 @@ public class ServerButtons {
                 });
     }
 
-    private static void updateOnlinePage(SimpleGui simpleGui, int page, List<ServerPlayer> players) {
+    private static void updateOnlinePage(SimpleGui simpleGui, int page, List<ServerPlayer> players,NationData nationData) {
         for (int i = 0; i < 45; i++) {
             int offsetSlot = page * 45 + i;
             if (offsetSlot < players.size()) {
                 ServerPlayer offsetPlayer = players.get(offsetSlot);
-                Nation nation = Services.PLATFORM.getNation(offsetPlayer);
+                Nation nation = nationData.getNationOf(offsetPlayer);
                 String nationName = nation != null ? nation.getName() : "None";
                 String string = offsetPlayer.getGameProfile().getName() + " | " + nationName;
 

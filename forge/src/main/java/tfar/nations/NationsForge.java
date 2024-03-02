@@ -25,9 +25,6 @@ import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
 import tfar.nations.platform.Services;
 
-import java.time.Instant;
-import java.util.Date;
-
 @Mod(Nations.MOD_ID)
 public class NationsForge {
 
@@ -40,7 +37,7 @@ public class NationsForge {
         // Use Forge to bootstrap the Common mod.
         // Nations.LOG.info("Hello Forge world!");
 
-        long epochSecond = Instant.now().getEpochSecond();
+
 
         MinecraftForge.EVENT_BUS.addListener(this::onCommandRegister);
         MinecraftForge.EVENT_BUS.addListener(this::playerLoggedIn);
@@ -77,7 +74,7 @@ public class NationsForge {
         NationData nationData = NationData.getOrCreateNationInstance(player.getLevel());
         Siege siege = nationData.getActiveSiege();
         if (siege != null) {
-            if (siege.isAttacking(player) && siege.shouldBlockAttackers() && TeamHandler.isPointInArea(target, siege.getClaimPos(), 1)) {
+            if (siege.isAttacking(player, nationData) && siege.shouldBlockAttackers() && TeamHandler.isPointInArea(target, siege.getClaimPos(), 1)) {
                 player.sendSystemMessage(Component.literal("Can't move into enemy claim during start of siege"));
                 return true;
             }
@@ -104,7 +101,7 @@ public class NationsForge {
             Nation nationChunk = nationData.getNationAtChunk(chunkPos);
             if (nationChunk == null) return;
             if (state.is(ModTags.CLAIM_RESISTANT)) {
-                Nation nation = Services.PLATFORM.getNation(serverPlayer);
+                Nation nation = nationData.getNationOf(serverPlayer);
                 if (nationChunk == nation || nationChunk.isAlly(nation)) {
 
                 } else {
@@ -128,7 +125,7 @@ public class NationsForge {
             Nation nationChunk = nationData.getNationAtChunk(chunkPos);
             if (nationChunk == null) return;
             if (state.is(ModTags.CLAIM_RESISTANT)) {
-                Nation nation = Services.PLATFORM.getNation(serverPlayer);
+                Nation nation = nationData.getNationOf(serverPlayer);
                 if (nationChunk == nation || nationChunk.isAlly(nation)) {
 
                 } else {
