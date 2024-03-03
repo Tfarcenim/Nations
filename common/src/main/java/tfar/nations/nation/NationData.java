@@ -77,9 +77,13 @@ public class NationData extends SavedData {
         return chunkLookup.get(chunkPos);
     }
 
-    public void sendInvites(List<GameProfile> profiles,Nation nation) {
+    public void sendInvites(List<GameProfile> profiles, Nation nation, MinecraftServer server) {
         for (GameProfile gameProfile : profiles) {
             invites.put(gameProfile.getId(),nation);
+            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
+            if (player != null) {
+                player.sendSystemMessage(Component.literal("You have been invited to nation "+nation.getName()));
+            }
         }
         setDirty();
     }
@@ -385,7 +389,7 @@ public class NationData extends SavedData {
 
     public boolean leaveNationGameProfiles(MinecraftServer server, Collection<GameProfile> serverPlayers) {
         for (Nation nation : nations) {
-            nation.removeGameProfiles(server,serverPlayers);
+            nation.removeGameProfiles(server,serverPlayers,this);
         }
 
         setDirty();

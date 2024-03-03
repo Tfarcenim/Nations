@@ -94,7 +94,7 @@ public class ServerButtons {
                                 .setName(invitePlayer.getName())
                                 .setCallback(
                                         (index2, type1, action1, gui) -> {
-                                            nationData.sendInvites(List.of(invitePlayer.getGameProfile()), existingNation);
+                                            nationData.sendInvites(List.of(invitePlayer.getGameProfile()), existingNation,player.server);
                                             gui.close();
                                         }));
                     }

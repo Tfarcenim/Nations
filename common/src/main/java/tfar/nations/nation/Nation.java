@@ -153,17 +153,17 @@ public class Nation {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
             members.removeInt(gameProfile);
-            TeamHandler.updateOthers(player,nationData );
-            TeamHandler.removeAllTeams(player);
+            TeamHandler.updateOthers(player,nationData);
+            TeamHandler.removeAllTeams(player, nationData);
         }
     }
 
-    public void removeGameProfiles(MinecraftServer server, Collection<GameProfile> gameProfiles) {
+    public void removeGameProfiles(MinecraftServer server, Collection<GameProfile> gameProfiles,NationData nationData) {
         for (GameProfile gameProfile : gameProfiles) {
             ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
             if (player != null) {
                 player.sendSystemMessage(Component.literal("You have been exiled from " + name));
-                TeamHandler.removeAllTeams(player);
+                TeamHandler.removeAllTeams(player,nationData );
             } else {
                 PlayerDataStorage playerDataStorage = ((MinecraftServerAccessor) server).getPlayerDataStorage();
                 ServerPlayer fakePlayer = Services.PLATFORM.getFakePlayer(server.overworld(), gameProfile);
@@ -172,7 +172,7 @@ public class Nation {
                     playerDataStorage.save(fakePlayer);
                 }
             }
-            members.remove(gameProfile);
+            members.removeInt(gameProfile);
         }
     }
 

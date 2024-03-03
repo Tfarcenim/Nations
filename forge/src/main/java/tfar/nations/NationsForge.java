@@ -20,10 +20,10 @@ import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import tfar.nations.datagen.Datagen;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
-import tfar.nations.platform.Services;
 
 @Mod(Nations.MOD_ID)
 public class NationsForge {
@@ -49,6 +49,11 @@ public class NationsForge {
         MinecraftForge.EVENT_BUS.addListener(this::teleportPearlEvent);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW,this::playerDied);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(Datagen::gather);
+
+        if (FMLEnvironment.dist.isClient()) {
+            FMLJavaModLoadingContext.get().getModEventBus().addListener(NationsClientForge::clientSetup);
+        }
+
         Nations.init();
     }
 
@@ -145,7 +150,9 @@ public class NationsForge {
             Siege siege = data.getActiveSiege();
             if (siege != null) {
                 siege.attackerDefeated(serverPlayer);
-                siege.defenderDefeated(serverPlayer);
+                if (siege.getStage() != Siege.Stage.ONE) {
+                    siege.defenderDefeated(serverPlayer);
+                }
             }
         }
     }

@@ -14,9 +14,8 @@ import net.minecraft.world.scores.Scoreboard;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class TeamHandler {
 
@@ -45,7 +44,7 @@ public class TeamHandler {
         mark(to,friendly,enemy);
     }
 
-    public static void removeAllTeams(ServerPlayer to) {
+    public static void removeAllTeams(ServerPlayer to,NationData nationData) {
         Scoreboard dummy = new Scoreboard();
 
         PlayerTeam friends = new PlayerTeam(dummy,"friends");
@@ -54,6 +53,7 @@ public class TeamHandler {
         PlayerTeam enemies = new PlayerTeam(dummy,"enemies");
         to.connection.send(ClientboundSetPlayerTeamPacket.createRemovePacket(friends));//create the team
         to.connection.send(ClientboundSetPlayerTeamPacket.createRemovePacket(enemies));//create the team
+        updateOthers(to,nationData);
     }
 
     public static void updateAll(ServerPlayer player,NationData nationData) {
@@ -158,6 +158,10 @@ public class TeamHandler {
         message.connection.send(ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(pTeam, true));//create the team
         message.connection.send(ClientboundSetPlayerTeamPacket.createPlayerPacket(pTeam, about.getGameProfile().getName(),
                 ClientboundSetPlayerTeamPacket.Action.ADD));//add the player to the team
+    }
+
+    public static List<ServerPlayer> getOnlinePlayers(Collection<GameProfile> profiles,MinecraftServer server) {
+        return profiles.stream().map(profile -> server.getPlayerList().getPlayer(profile.getId())).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     public static boolean membersNearby(MinecraftServer server,ChunkPos pos, Nation nation) {
