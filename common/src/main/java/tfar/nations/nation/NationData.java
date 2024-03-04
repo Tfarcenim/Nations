@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import tfar.nations.Nations;
 import tfar.nations.Siege;
 import tfar.nations.TeamHandler;
+import tfar.nations.platform.Services;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -89,7 +90,7 @@ public class NationData extends SavedData {
     }
 
     public void awardNearbyClaimsToAttackers(Nation attackers,Nation defenders,ChunkPos pos) {
-        int radius = 1;
+        int radius = 4;
         for (int z = -radius; z < radius + 1;z++) {
             for (int x = -radius; x < radius + 1;x++) {
                 ChunkPos around = new ChunkPos(pos.x+x,pos.z+z);
@@ -102,8 +103,12 @@ public class NationData extends SavedData {
         }
     }
 
-    public void sendAllyInvites(Nation fromNation,Nation toNation) {
+    public void sendAllyInvites(Nation fromNation, Nation toNation, MinecraftServer server) {
         allyInvites.put(toNation,fromNation);
+        ServerPlayer otherOwner = server.getPlayerList().getPlayer(toNation.getOwner().getId());
+        if (otherOwner != null) {
+            otherOwner.sendSystemMessage(Component.literal("You have been invited to an alliance with "+fromNation.getName()));
+        }
     }
 
     public void makeEnemy(MinecraftServer server,Nation fromNation,Nation toNation) {
@@ -111,18 +116,7 @@ public class NationData extends SavedData {
         toNation.getEnemies().add(fromNation.getName());
         fromNation.getAllies().remove(toNation.getName());
         toNation.getAllies().remove(fromNation.getName());
-
-        HashSet<GameProfile> allProfiles = new HashSet<>();
-        allProfiles.addAll(toNation.getMembers());
-        allProfiles.addAll(fromNation.getMembers());
-
-        for (GameProfile gameProfile : allProfiles) {
-            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
-            if (player != null) {
-                TeamHandler.updateOthers(player, this);
-            }
-        }
-
+        updateRemoteTeams = true;
         setDirty();
     }
 
@@ -132,18 +126,7 @@ public class NationData extends SavedData {
 
         toNation.getEnemies().remove(fromNation.getName());
         toNation.getAllies().remove(fromNation.getName());
-
-        HashSet<GameProfile> allProfiles = new HashSet<>();
-        allProfiles.addAll(toNation.getMembers());
-        allProfiles.addAll(fromNation.getMembers());
-
-        for (GameProfile gameProfile : allProfiles) {
-            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
-            if (player != null) {
-                TeamHandler.updateOthers(player, this);
-            }
-        }
-
+        updateRemoteTeams = true;
         setDirty();
     }
 
@@ -180,13 +163,7 @@ public class NationData extends SavedData {
             endSiege(Siege.Result.TERMINATED);
         }
 
-        for (GameProfile profile : toRemove.getMembers()) {
-            ServerPlayer player = server.getPlayerList().getPlayer(profile.getId());
-            if (player != null) {
-                TeamHandler.updateOthers(player, this);
-            }
-        }
-
+        updateRemoteTeams = true;
         setDirty();
         return b;
     }
@@ -218,7 +195,10 @@ public class NationData extends SavedData {
         for (Nation nation : nations) {
             didAnything |= nation.tick(level.getServer());
         }
-        if (didAnything) setDirty();
+        if (didAnything) {
+            updateRemoteTeams = true;
+            setDirty();
+        }
     }
 
     public List<Nation> getNations() {
@@ -291,27 +271,15 @@ public class NationData extends SavedData {
     public void createAllianceBetween(MinecraftServer server,Nation fromNation,Nation toNation) {
         fromNation.getAllies().add(toNation.getName());
         toNation.getAllies().add(fromNation.getName());
-
-
-        HashSet<GameProfile> allProfiles = new HashSet<>();
-        allProfiles.addAll(toNation.getMembers());
-        allProfiles.addAll(fromNation.getMembers());
-
-        for (GameProfile gameProfile : allProfiles) {
-            ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
-            if (player != null) {
-                TeamHandler.updateOthers(player, this);
-            }
-        }
-
-
+        updateRemoteTeams = true;
         setDirty();
     }
 
     public boolean joinNation(String name, Collection<ServerPlayer> serverPlayers) {
         Nation nation = getNationByName(name);
         if (nation != null) {
-            nation.addPlayers(serverPlayers, this);
+            nation.addPlayers(serverPlayers);
+            updateRemoteTeams = true;
             setDirty();
             return true;
         }
@@ -374,24 +342,32 @@ public class NationData extends SavedData {
 
     public boolean leaveNation(Collection<ServerPlayer> serverPlayers) {
         for (Nation nation : nations) {
-            nation.removePlayers(serverPlayers, this);
+            nation.removePlayers(serverPlayers);
         }
+        updateRemoteTeams = true;
         setDirty();
         return true;
     }
+
+    private boolean updateRemoteTeams;
 
     @Override
     public void setDirty() {
         super.setDirty();
         playerLookup.clear();
-        nations.forEach(nation -> nation.getMembers().forEach(gameProfile -> playerLookup.put(gameProfile,nation)));
+        nations.forEach(nation -> nation.getMembers().forEach(gameProfile -> playerLookup.put(gameProfile, nation)));
+        if (updateRemoteTeams) {
+            updateRemoteTeams = false;
+            RemoteTeams.syncFromNations(this);
+            RemoteTeams.syncToAllClients(Services.PLATFORM.getStaticServer());
+        }
     }
 
     public boolean leaveNationGameProfiles(MinecraftServer server, Collection<GameProfile> serverPlayers) {
         for (Nation nation : nations) {
-            nation.removeGameProfiles(server,serverPlayers,this);
+            nation.removeGameProfiles(server,serverPlayers);
         }
-
+        updateRemoteTeams = true;
         setDirty();
         return true;
     }

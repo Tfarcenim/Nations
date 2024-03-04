@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
@@ -17,6 +18,7 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -24,6 +26,8 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 import tfar.nations.datagen.Datagen;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
+
+import java.util.List;
 
 @Mod(Nations.MOD_ID)
 public class NationsForge {
@@ -47,6 +51,7 @@ public class NationsForge {
         MinecraftForge.EVENT_BUS.addListener(this::levelTick);
         MinecraftForge.EVENT_BUS.addListener(this::teleportEvent);
         MinecraftForge.EVENT_BUS.addListener(this::teleportPearlEvent);
+        MinecraftForge.EVENT_BUS.addListener(this::explosion);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW,this::playerDied);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(Datagen::gather);
 
@@ -141,6 +146,18 @@ public class NationsForge {
                     event.setCanceled(true);
                 }
             }
+        }
+    }
+
+    private void explosion(ExplosionEvent.Detonate event) {
+        Level level = event.getLevel();
+        if (level instanceof ServerLevel serverLevel) {
+            List<BlockPos> posList = event.getAffectedBlocks();
+            NationData nationData = NationData.getOrCreateDefaultNationsInstance(serverLevel.getServer());
+            posList.removeIf(pos -> {
+                Nation nation = nationData.getNationAtChunk(new ChunkPos(pos));
+                return nation != null;
+            });
         }
     }
 

@@ -30,6 +30,8 @@ import org.slf4j.LoggerFactory;
 import tfar.nations.level.OfflineTrackerData;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
+import tfar.nations.nation.RemoteTeams;
+import tfar.nations.platform.Services;
 import tfar.nations.sgui.api.ClickType;
 import tfar.nations.sgui.api.elements.*;
 import tfar.nations.sgui.api.gui.SimpleGui;
@@ -74,9 +76,8 @@ public class Nations {
         if (siege != null && siege.isPlayerInvolved(player,nationData)) {
             nationData.endSiege(Siege.Result.TERMINATED);
         }
-
-        TeamHandler.updateSelf(player, nationData);
-        TeamHandler.updateOthers(player, nationData);
+        RemoteTeams.syncFromNations(nationData);
+        RemoteTeams.syncToOnly(player,nationData);
     }
 
     public static void logout(ServerPlayer player) {
@@ -89,9 +90,6 @@ public class Nations {
 
         OfflineTrackerData offlineTrackerData = OfflineTrackerData.getOrCreateDefaultInstance(player.server);
         offlineTrackerData.saveTimeStamp(player);
-
-//        TeamHandler.updateSelf(player);
-  //      TeamHandler.updateOthers(player);
     }
 
 
@@ -387,7 +385,7 @@ public class Nations {
                                                 .setName(Component.literal(nation.getOwner().getName()))
 
                                                 .setCallback((index2, type2, action2, gui2) -> {
-                                                    nationData.sendAllyInvites(existingNation, nation);
+                                                    nationData.sendAllyInvites(existingNation, nation,player.server);
                                                     gui2.close();
                                                 })
                                         );

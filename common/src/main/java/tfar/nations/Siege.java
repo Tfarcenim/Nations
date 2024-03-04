@@ -11,7 +11,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import tfar.nations.nation.Nation;
 import tfar.nations.nation.NationData;
-import tfar.nations.platform.Services;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -58,9 +57,9 @@ public class Siege {
     }
 
     public enum Stage {
-        ONE(20 * 60 * 1),//5 minutes
-        TWO(20 * 60 * 1),//10 minutes
-        THREE(20 * 60 * 1);//5 minutes
+        ONE(20 * 60 * 2),//5 minutes
+        TWO(20 * 60 * 2),//10 minutes
+        THREE(20 * 60 * 2);//5 minutes
         private final long ticks;
 
         Stage(long ticks) {

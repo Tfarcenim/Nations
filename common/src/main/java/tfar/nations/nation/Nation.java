@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.storage.PlayerDataStorage;
 import org.jetbrains.annotations.Nullable;
-import tfar.nations.TeamHandler;
 import tfar.nations.level.OfflineTrackerData;
 import tfar.nations.mixin.MinecraftServerAccessor;
 import tfar.nations.platform.Services;
@@ -78,15 +77,15 @@ public class Nation {
             if (profile.equals(owner)) continue;
             ServerPlayer player = server.getPlayerList().getPlayer(profile.getId());
             if (player != null) continue;
-            long time = OfflineTrackerData.getOrCreateDefaultInstance(server).ticksSinceOnline(server,profile);
+            long time = OfflineTrackerData.getOrCreateDefaultInstance(server).ticksSinceOnline(server, profile);
             if (time > NationData.KICK_TIME) {
                 toKick.add(profile);
                 ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(owner.getId());
                 if (ownerPlayer != null)
-                    ownerPlayer.sendSystemMessage(Component.literal("Kicked "+ profile.getName() + " from nation for inactivity"));
-                }
+                    ownerPlayer.sendSystemMessage(Component.literal("Kicked " + profile.getName() + " from nation for inactivity"));
             }
-        removeGameProfiles(server,toKick);
+        }
+        removeGameProfiles(server, toKick);
         return !toKick.isEmpty();
     }
 
@@ -98,12 +97,10 @@ public class Nation {
         this.color = color;
     }
 
-    void addPlayers(Collection<ServerPlayer> players,NationData nationData) {
+    void addPlayers(Collection<ServerPlayer> players) {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
             members.put(gameProfile, 0);
-            TeamHandler.updateOthers(player, nationData);
-            TeamHandler.updateSelf(player, nationData);
         }
     }
 
@@ -141,7 +138,7 @@ public class Nation {
     }
 
     public boolean canClaim(int count) {
-        return (claimed.size()+ count - 1) < getTotalPower();
+        return (claimed.size() + count - 1) < getTotalPower();
     }
 
 
@@ -149,21 +146,18 @@ public class Nation {
         return player.getGameProfile().equals(owner);
     }
 
-    public void removePlayers(Collection<ServerPlayer> players,NationData nationData) {
+    public void removePlayers(Collection<ServerPlayer> players) {
         for (ServerPlayer player : players) {
             GameProfile gameProfile = player.getGameProfile();
             members.removeInt(gameProfile);
-            TeamHandler.updateOthers(player,nationData);
-            TeamHandler.removeAllTeams(player, nationData);
         }
     }
 
-    public void removeGameProfiles(MinecraftServer server, Collection<GameProfile> gameProfiles,NationData nationData) {
+    public void removeGameProfiles(MinecraftServer server, Collection<GameProfile> gameProfiles) {
         for (GameProfile gameProfile : gameProfiles) {
             ServerPlayer player = server.getPlayerList().getPlayer(gameProfile.getId());
             if (player != null) {
                 player.sendSystemMessage(Component.literal("You have been exiled from " + name));
-                TeamHandler.removeAllTeams(player,nationData );
             } else {
                 PlayerDataStorage playerDataStorage = ((MinecraftServerAccessor) server).getPlayerDataStorage();
                 ServerPlayer fakePlayer = Services.PLATFORM.getFakePlayer(server.overworld(), gameProfile);

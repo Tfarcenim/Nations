@@ -445,10 +445,10 @@ public class ServerButtons {
     public static GuiElementBuilder claimChunksButton2(ServerPlayer player, NationData nationData, Nation existingNation) {
         return new GuiElementBuilder()
                 .setItem(Items.WHITE_BANNER)
-                .setName(Component.literal("Claim land v2"))
+                .setName(Component.literal("Claim Land"))//v2
                 .setCallback((index, type, action) -> {
                     SimpleGui claimGui = new SimpleGui(MenuType.GENERIC_9x6, player, false);
-                    claimGui.setTitle(Component.literal("Claim land v2"));
+                    claimGui.setTitle(Component.literal("Claim Land"));//v2
                     ChunkPos chunkPos = new ChunkPos(player.blockPosition());
                     int index1 = 0;
                     final Map<Integer,ChunkPos> slotmap = new HashMap<>();
