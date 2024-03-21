@@ -1,6 +1,9 @@
 package tfar.nations.level;
 
 import com.mojang.authlib.GameProfile;
+import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.ObjectSet;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
@@ -15,11 +18,12 @@ import tfar.nations.Nations;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class OfflineTrackerData extends SavedData {
 
-    Map<GameProfile,Long> lastSeen = new HashMap<>();
+    Object2LongMap<GameProfile> lastSeen = new Object2LongArrayMap<>();
 
     private static final Logger LOG = LogManager.getLogger();
 
@@ -37,30 +41,22 @@ public class OfflineTrackerData extends SavedData {
         setDirty();
     }
 
-    public long lastOnline(GameProfile profile) {
-        if (!lastSeen.containsKey(profile)) {
-            LOG.warn(profile +" was never on this server");
-            return -1;
-        }
-        return lastSeen.get(profile);
-    }
-
     public long ticksSinceOnline(MinecraftServer server,GameProfile profile) {
         if (!lastSeen.containsKey(profile)) {
             LOG.warn(profile +" was never on this server");
             return -1;
         }
-        return server.overworld().getGameTime() - lastSeen.get(profile);
+        return server.overworld().getGameTime() - lastSeen.getLong(profile);
     }
 
     @Override
     public CompoundTag save(CompoundTag compoundTag) {
         ListTag listTag = new ListTag();
 
-        for (Map.Entry<GameProfile,Long> entry : lastSeen.entrySet()) {
+        for (Object2LongMap.Entry<GameProfile> entry : lastSeen.object2LongEntrySet()) {
             CompoundTag tag = new CompoundTag();
             tag.put("profile", NbtUtils.writeGameProfile(new CompoundTag(),entry.getKey()));
-            tag.putLong("lastSeen",entry.getValue());
+            tag.putLong("lastSeen",entry.getLongValue());
             listTag.add(tag);
         }
         compoundTag.put("profiles",listTag);

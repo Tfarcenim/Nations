@@ -60,7 +60,12 @@ public class ServerButtons {
                         if (player.server.getPlayerList().getPlayer(gameProfile.getId()) == null) {
                             long ticks = OfflineTrackerData.getOrCreateDefaultInstance(player.server).ticksSinceOnline(player.server, gameProfile);
                             String time = OfflineTrackerData.formatTime(ticks);
-                            name += " (Offline) + last seen " + time + " ago";
+                            name += " (Offline) + last seen";
+                            if (ticks > -1) {
+                                name +=  " "+ time + " ago";
+                            } else {
+                                name +=  " unknown";
+                            }
                         }
                         exileGui.setSlot(i, elementBuilder
                                 .setSkullOwner(gameProfile, player.server)
@@ -81,7 +86,7 @@ public class ServerButtons {
         return new GuiElementBuilder(Items.PAPER)
                 .setName(Component.literal("Invite Players"))
                 .setCallback((index1, clickType1, actionType1) -> {
-                    SimpleGui inviteGui = new SimpleGui(MenuType.GENERIC_9x3, player, false);
+                    SimpleGui inviteGui = new SimpleGui(MenuType.GENERIC_9x6, player, false);
 
                     inviteGui.setTitle(Component.literal("Invite Players"));
                     List<ServerPlayer> eligible = Nations.getUninvitedPlayers(player, nationData);
@@ -97,6 +102,7 @@ public class ServerButtons {
                                             nationData.sendInvites(List.of(invitePlayer.getGameProfile()), existingNation,player.server);
                                             gui.close();
                                         }));
+                        i++;
                     }
 
                            /*     inviteGui.setSlot(26, new GuiElementBuilder()
